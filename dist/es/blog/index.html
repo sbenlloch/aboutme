@@ -1,0 +1,132 @@
+<!DOCTYPE html><html lang="es" data-theme="light"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Computer engineer specialized in Computer Engineering, currently working as an R&#38;D Security Engineer on practical security assessment, reverse engineering, cryptography, AI security, and robust mitigation work with engineering teams."><meta name="theme-color" content="#f8faf7"><link rel="icon" href="/favicon.svg"><title>Notas de investigación y métodos de campo | Sergio Benlloch</title><link rel="stylesheet" href="/_astro/BaseLayout.B7S7mPHr.css"></head> <body> <script>
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    </script> <div class="scanline" aria-hidden="true"></div> <header class="site-header"> <a class="brand" href="/es" aria-label="Go home"> <span class="prompt">sergio@sec</span><span class="cursor">_</span> </a> <nav class="nav" aria-label="Primary navigation"> <a href="/es">inicio</a><a href="/es/projects">proyectos</a><a href="/es/blog">blog</a><a href="/es/contact">contacto</a> </nav> <div class="toggles" aria-label="Preferences"> <a class="toggle-link" href="/en/blog" aria-label="Switch language to en"> idioma: en </a> <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle black and white theme"> tema: <span data-theme-label>blanco</span> </button> </div> </header> <main>  <section class="page-shell"> <div class="section-heading"> <p>blog</p> <h2>Notas de investigación y métodos de campo</h2> </div> <div class="grid"> <article class="card"> <a class="card-link" href="/es/blog/paper-iot-audio-threat-modeling"> <span class="card-meta" data-repo-meta>18 sept 2025</span> <h3>Paper: modelado de amenazas para IoT con clasificación de audio</h3> <p>Una nota sobre el paper de seguridad para nodos IoT con micrófono, clasificación de audio y una arquitectura pensada para proteger datos, firmware y comunicaciones.</p> <div class="tags" aria-label="Tags"> <span>#paper</span><span>#iot-security</span><span>#threat-modeling</span><span>#pqc</span> </div> </a> </article> <script>
+  const repoPathFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname !== "github.com" || parts.length < 2) return null;
+      return `${parts[0]}/${parts[1]}`;
+    } catch {
+      return null;
+    }
+  };
+
+  document.querySelectorAll("[data-repo-card]").forEach(async (card) => {
+    if (card.dataset.githubReady === "true") return;
+    card.dataset.githubReady = "true";
+
+    const repoPath = repoPathFromUrl(card.dataset.repoUrl || "");
+    const meta = card.querySelector("[data-repo-meta]");
+    if (!repoPath || !meta) return;
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) return;
+      const repo = await response.json();
+      const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+      meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+    } catch {
+      // Static metadata is already rendered, so the card remains usable offline.
+    }
+  });
+</script><article class="card"> <a class="card-link" href="/es/blog/tfm-inteligencia-binarios"> <span class="card-meta" data-repo-meta>10 jul 2023</span> <h3>Mi TFM: inteligencia de archivos binarios</h3> <p>Una explicación cercana del TFM: caracterizar ejecutables y usar aprendizaje automático como apoyo para tareas de ciberinteligencia.</p> <div class="tags" aria-label="Tags"> <span>#tfm</span><span>#binary-analysis</span><span>#machine-learning</span><span>#ciberinteligencia</span> </div> </a> </article> <script>
+  const repoPathFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname !== "github.com" || parts.length < 2) return null;
+      return `${parts[0]}/${parts[1]}`;
+    } catch {
+      return null;
+    }
+  };
+
+  document.querySelectorAll("[data-repo-card]").forEach(async (card) => {
+    if (card.dataset.githubReady === "true") return;
+    card.dataset.githubReady = "true";
+
+    const repoPath = repoPathFromUrl(card.dataset.repoUrl || "");
+    const meta = card.querySelector("[data-repo-meta]");
+    if (!repoPath || !meta) return;
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) return;
+      const repo = await response.json();
+      const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+      meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+    } catch {
+      // Static metadata is already rendered, so the card remains usable offline.
+    }
+  });
+</script><article class="card"> <a class="card-link" href="/es/blog/tfg-optimizacion-binaria"> <span class="card-meta" data-repo-meta>15 jul 2021</span> <h3>Mi TFG: optimizar binarios sin mirar solo una métrica</h3> <p>Una nota sobre el TFG: exploración multiobjetivo de flags de GCC para entender compromisos entre tamaño, tiempo, memoria, CPU y robustez.</p> <div class="tags" aria-label="Tags"> <span>#tfg</span><span>#gcc</span><span>#binarios</span><span>#optimizacion</span> </div> </a> </article> <script>
+  const repoPathFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname !== "github.com" || parts.length < 2) return null;
+      return `${parts[0]}/${parts[1]}`;
+    } catch {
+      return null;
+    }
+  };
+
+  document.querySelectorAll("[data-repo-card]").forEach(async (card) => {
+    if (card.dataset.githubReady === "true") return;
+    card.dataset.githubReady = "true";
+
+    const repoPath = repoPathFromUrl(card.dataset.repoUrl || "");
+    const meta = card.querySelector("[data-repo-meta]");
+    if (!repoPath || !meta) return;
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) return;
+      const repo = await response.json();
+      const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+      meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+    } catch {
+      // Static metadata is already rendered, so the card remains usable offline.
+    }
+  });
+</script> </div> </section>  </main> <footer class="site-footer"> <span>~/portfolio</span> <span>con Astro + Markdown</span> </footer> <script>(function(){const lightLabel = "blanco";
+const darkLabel = "negro";
+
+      const button = document.querySelector("[data-theme-toggle]");
+      const label = document.querySelector("[data-theme-label]");
+      const getNextTheme = () => (document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      const applyThemeLabel = () => {
+        if (label) {
+          label.textContent = getNextTheme() === "dark" ? darkLabel : lightLabel;
+        }
+      };
+      applyThemeLabel();
+      button?.addEventListener("click", () => {
+        const nextTheme = getNextTheme();
+        document.documentElement.dataset.theme = nextTheme;
+        localStorage.setItem("theme", nextTheme);
+        applyThemeLabel();
+      });
+    })();</script>  </body></html>

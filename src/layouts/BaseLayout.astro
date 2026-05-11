@@ -1,0 +1,90 @@
+---
+import "../styles/global.css";
+import { otherLocale, pathFor, pathForLocaleSwitch, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
+
+interface Props {
+  title?: string;
+  description?: string;
+  locale?: Locale;
+  currentPath?: string;
+}
+
+const {
+  title = `${profile.name} | ${profile.role}`,
+  description = profile.summary,
+  locale = "en",
+  currentPath = "/"
+} = Astro.props;
+
+const t = ui[locale];
+const switchLocale = otherLocale(locale);
+const switchHref = pathForLocaleSwitch(locale, currentPath);
+const navItems = [
+  { href: pathFor(locale), label: t.nav.home },
+  { href: pathFor(locale, "/projects"), label: t.nav.projects },
+  { href: pathFor(locale, "/blog"), label: t.nav.blog },
+  { href: pathFor(locale, "/contact"), label: t.nav.contact }
+];
+---
+
+<!doctype html>
+<html lang={locale} data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f8faf7" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <script is:inline>
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    </script>
+    <div class="scanline" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href={pathFor(locale)} aria-label="Go home">
+        <span class="prompt">sergio@sec</span><span class="cursor">_</span>
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+      <div class="toggles" aria-label="Preferences">
+        <a class="toggle-link" href={switchHref} aria-label={`Switch language to ${switchLocale}`}>
+          {t.language}: {switchLocale}
+        </a>
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle black and white theme">
+          {t.theme}: <span data-theme-label>{t.light}</span>
+        </button>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <span>~/portfolio</span>
+      <span>{t.footer}</span>
+    </footer>
+    <script is:inline define:vars={{ lightLabel: t.light, darkLabel: t.dark }}>
+      const button = document.querySelector("[data-theme-toggle]");
+      const label = document.querySelector("[data-theme-label]");
+      const getNextTheme = () => (document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      const applyThemeLabel = () => {
+        if (label) {
+          label.textContent = getNextTheme() === "dark" ? darkLabel : lightLabel;
+        }
+      };
+      applyThemeLabel();
+      button?.addEventListener("click", () => {
+        const nextTheme = getNextTheme();
+        document.documentElement.dataset.theme = nextTheme;
+        localStorage.setItem("theme", nextTheme);
+        applyThemeLabel();
+      });
+    </script>
+  </body>
+</html>

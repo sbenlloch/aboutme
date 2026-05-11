@@ -1,0 +1,29 @@
+---
+import { profile } from "@data/profile";
+
+interface Props {
+  label: string;
+  variant?: "primary" | "plain";
+}
+
+const { label, variant = "plain" } = Astro.props;
+---
+
+<button
+  class:list={["button", { primary: variant === "primary" }]}
+  type="button"
+  data-contact-reveal
+  data-user={profile.emailUser}
+  data-domain={profile.emailDomain}
+>
+  {label}
+</button>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-contact-reveal]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const address = `${button.dataset.user}@${button.dataset.domain}`;
+      window.location.href = `mailto:${address}`;
+    });
+  });
+</script>

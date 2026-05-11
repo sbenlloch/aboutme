@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "@components/ArticleCard.astro";
+import SectionHeading from "@components/SectionHeading.astro";
+import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang }, props: { locale: lang } }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+const t = ui[locale];
+const posts = (await getCollection("blog"))
+  .filter((post) => post.data.locale === locale && !post.data.draft)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf());
+
+function contentSlug(id: string) {
+  return id.split("/").pop() ?? id;
+}
+---
+
+<BaseLayout locale={locale} currentPath="/blog" title={`${t.pages.blogTitle} | Sergio Benlloch`}>
+  <section class="page-shell">
+    <SectionHeading eyebrow={t.pages.blogEyebrow} title={t.pages.blogTitle} />
+    <div class="grid">
+      {posts.map((post) => (
+        <ArticleCard href={pathFor(locale, `/blog/${contentSlug(post.id)}`)} title={post.data.title} description={post.data.description} meta={post.data.publishedAt.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })} tags={post.data.tags} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

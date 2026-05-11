@@ -1,0 +1,24 @@
+<!DOCTYPE html><html lang="en" data-theme="light"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Small Python application to emulate sensors in an MQTT environment."><meta name="theme-color" content="#f8faf7"><link rel="icon" href="/favicon.svg"><title>sensor_emulation | Projects</title><link rel="stylesheet" href="/_astro/BaseLayout.B7S7mPHr.css"></head> <body> <script>
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    </script> <div class="scanline" aria-hidden="true"></div> <header class="site-header"> <a class="brand" href="/en" aria-label="Go home"> <span class="prompt">sergio@sec</span><span class="cursor">_</span> </a> <nav class="nav" aria-label="Primary navigation"> <a href="/en">home</a><a href="/en/projects">projects</a><a href="/en/blog">blog</a><a href="/en/contact">contact</a> </nav> <div class="toggles" aria-label="Preferences"> <a class="toggle-link" href="/es/projects/sensor-emulation" aria-label="Switch language to es"> language: es </a> <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle black and white theme"> theme: <span data-theme-label>white</span> </button> </div> </header> <main>  <article class="prose page-shell"> <a class="back-link" href="/en/projects">../projects</a> <p class="kicker"> 2022 / active  / updated Jan 9, 2022 </p> <h1>sensor_emulation</h1> <p class="lead">Small Python application to emulate sensors in an MQTT environment.</p> <div class="tags page-tags"><span>#python</span><span>#mqtt</span><span>#iot</span><span>#sensors</span></div> <p>sensor_emulation is a small MQTT-focused application for emulating sensor behavior. It is relevant to IoT testing, local environments, and protocol-oriented experimentation.</p> <div class="actions">  <a class="button" href="https://github.com/sbenlloch/sensor_emulation" target="_blank" rel="noreferrer">source</a> </div> </article>  </main> <footer class="site-footer"> <span>~/portfolio</span> <span>built with Astro + Markdown</span> </footer> <script>(function(){const lightLabel = "white";
+const darkLabel = "black";
+
+      const button = document.querySelector("[data-theme-toggle]");
+      const label = document.querySelector("[data-theme-label]");
+      const getNextTheme = () => (document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      const applyThemeLabel = () => {
+        if (label) {
+          label.textContent = getNextTheme() === "dark" ? darkLabel : lightLabel;
+        }
+      };
+      applyThemeLabel();
+      button?.addEventListener("click", () => {
+        const nextTheme = getNextTheme();
+        document.documentElement.dataset.theme = nextTheme;
+        localStorage.setItem("theme", nextTheme);
+        applyThemeLabel();
+      });
+    })();</script>  </body></html>

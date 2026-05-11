@@ -1,0 +1,25 @@
+<!DOCTYPE html><html lang="en" data-theme="light"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Toolkit for machine learning-based malware detectors: data mining, feature extraction, model selection, and prototype deployment."><meta name="theme-color" content="#f8faf7"><link rel="icon" href="/favicon.svg"><title>devAV | Projects</title><link rel="stylesheet" href="/_astro/BaseLayout.B7S7mPHr.css"></head> <body> <script>
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark" || savedTheme === "light") {
+        document.documentElement.dataset.theme = savedTheme;
+      }
+    </script> <div class="scanline" aria-hidden="true"></div> <header class="site-header"> <a class="brand" href="/en" aria-label="Go home"> <span class="prompt">sergio@sec</span><span class="cursor">_</span> </a> <nav class="nav" aria-label="Primary navigation"> <a href="/en">home</a><a href="/en/projects">projects</a><a href="/en/blog">blog</a><a href="/en/contact">contact</a> </nav> <div class="toggles" aria-label="Preferences"> <a class="toggle-link" href="/es/projects/devav" aria-label="Switch language to es"> language: es </a> <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle black and white theme"> theme: <span data-theme-label>white</span> </button> </div> </header> <main>  <article class="prose page-shell"> <a class="back-link" href="/en/projects">../projects</a> <p class="kicker"> 2023 / active  / updated Jul 30, 2024 </p> <h1>devAV</h1> <p class="lead">Toolkit for machine learning-based malware detectors: data mining, feature extraction, model selection, and prototype deployment.</p> <div class="tags page-tags"><span>#jupyter</span><span>#machine-learning</span><span>#malware</span><span>#av</span><span>#parser</span></div> <p>devAV is a research toolkit for building machine learning-based malware detection prototypes. The repository description covers the end-to-end path from data mining and feature extraction to model selection and prototype deployment.</p>
+<p>It fits the portfolio as the bridge between cybersecurity research, binary features, and ML experimentation.</p> <div class="actions">  <a class="button" href="https://github.com/sbenlloch/devAV" target="_blank" rel="noreferrer">source</a> </div> </article>  </main> <footer class="site-footer"> <span>~/portfolio</span> <span>built with Astro + Markdown</span> </footer> <script>(function(){const lightLabel = "white";
+const darkLabel = "black";
+
+      const button = document.querySelector("[data-theme-toggle]");
+      const label = document.querySelector("[data-theme-label]");
+      const getNextTheme = () => (document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      const applyThemeLabel = () => {
+        if (label) {
+          label.textContent = getNextTheme() === "dark" ? darkLabel : lightLabel;
+        }
+      };
+      applyThemeLabel();
+      button?.addEventListener("click", () => {
+        const nextTheme = getNextTheme();
+        document.documentElement.dataset.theme = nextTheme;
+        localStorage.setItem("theme", nextTheme);
+        applyThemeLabel();
+      });
+    })();</script>  </body></html>

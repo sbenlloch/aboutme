@@ -1,0 +1,32 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "@components/ArticleCard.astro";
+import SectionHeading from "@components/SectionHeading.astro";
+import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang }, props: { locale: lang } }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+const t = ui[locale];
+const projects = (await getCollection("projects"))
+  .filter((project) => project.data.locale === locale)
+  .sort((a, b) => b.data.year - a.data.year);
+
+function contentSlug(id: string) {
+  return id.split("/").pop() ?? id;
+}
+---
+
+<BaseLayout locale={locale} currentPath="/projects" title={`${t.pages.projectsTitle} | Sergio Benlloch`}>
+  <section class="page-shell">
+    <SectionHeading eyebrow={t.pages.projectsEyebrow} title={t.pages.projectsTitle} />
+    <div class="grid">
+      {projects.map((project) => (
+        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${project.data.status}`} tags={project.data.tags} />
+      ))}
+    </div>
+  </section>
+</BaseLayout>

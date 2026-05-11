@@ -1,0 +1,62 @@
+---
+interface Props {
+  href: string;
+  title: string;
+  description: string;
+  meta: string;
+  tags: string[];
+  repo?: string;
+  external?: boolean;
+}
+
+const { href, title, description, meta, tags, repo, external = false } = Astro.props;
+---
+
+<article class="card" data-repo-card={repo ? "true" : undefined} data-repo-url={repo}>
+  <a class="card-link" href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+    <span class="card-meta" data-repo-meta>{meta}</span>
+    <h3>{title}</h3>
+    <p>{description}</p>
+    <div class="tags" aria-label="Tags">
+      {tags.map((tag) => <span>#{tag}</span>)}
+    </div>
+  </a>
+</article>
+
+<script is:inline>
+  const repoPathFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const parts = parsed.pathname.split("/").filter(Boolean);
+      if (parsed.hostname !== "github.com" || parts.length < 2) return null;
+      return `${parts[0]}/${parts[1]}`;
+    } catch {
+      return null;
+    }
+  };
+
+  document.querySelectorAll("[data-repo-card]").forEach(async (card) => {
+    if (card.dataset.githubReady === "true") return;
+    card.dataset.githubReady = "true";
+
+    const repoPath = repoPathFromUrl(card.dataset.repoUrl || "");
+    const meta = card.querySelector("[data-repo-meta]");
+    if (!repoPath || !meta) return;
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
+        headers: { Accept: "application/vnd.github+json" }
+      });
+      if (!response.ok) return;
+      const repo = await response.json();
+      const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      });
+      meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+    } catch {
+      // Static metadata is already rendered, so the card remains usable offline.
+    }
+  });
+</script>
