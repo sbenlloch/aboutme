@@ -1,0 +1,127 @@
+---
+import { getCollection } from "astro:content";
+import ArticleCard from "@components/ArticleCard.astro";
+import ContactReveal from "@components/ContactReveal.astro";
+import SectionHeading from "@components/SectionHeading.astro";
+import TerminalWindow from "@components/TerminalWindow.astro";
+import Timeline from "@components/Timeline.astro";
+import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
+import { resumeCopy } from "@data/resume";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang }, props: { locale: lang } }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+const t = ui[locale];
+const copy = resumeCopy[locale];
+
+const projects = (await getCollection("projects"))
+  .filter((project) => project.data.locale === locale && project.data.featured)
+  .sort((a, b) => b.data.year - a.data.year);
+
+const posts = (await getCollection("blog"))
+  .filter((post) => post.data.locale === locale && !post.data.draft)
+  .sort((a, b) => b.data.publishedAt.valueOf() - a.data.publishedAt.valueOf())
+  .slice(0, 2);
+
+function contentSlug(id: string) {
+  return id.split("/").pop() ?? id;
+}
+---
+
+<BaseLayout locale={locale} currentPath="/" title={`${profile.name} | ${copy.role}`} description={copy.summary}>
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="kicker">{t.home.kicker}</p>
+      <h1>{profile.name}</h1>
+      <p class="role">{copy.role}</p>
+      <p>{copy.summary}</p>
+      <div class="actions">
+        <a class="button primary" href={pathFor(locale, "/projects")}>{t.home.viewProjects}</a>
+        <ContactReveal label={t.home.contact} />
+        <a class="button" href={profile.github} target="_blank" rel="noreferrer">{t.home.githubStats}</a>
+        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">{t.home.linkedinStats}</a>
+      </div>
+    </div>
+    <TerminalWindow title="whoami">
+      <div class="profile-chip">
+        <img src={profile.avatar} alt={`${profile.name} profile photo`} width="96" height="96" loading="eager" />
+        <div>
+          <strong>{profile.githubBio}</strong>
+          <span>{profile.company}</span>
+        </div>
+      </div>
+      <div class="linux-term">
+        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> uname -srmo</p>
+        <p class="term-output">Linux 6.x x86_64 GNU/Linux</p>
+        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> id</p>
+        <p class="term-output">uid=1000(security-researcher) groups=pentest,reversing,crypto</p>
+        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> cat ~/.profile</p>
+        <p class="term-output">{profile.location}</p>
+        <p class="term-output">contact=<span class="redacted">use --mail flag</span></p>
+        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> gh api /users/sbenlloch --jq '.public_repos,.followers'</p>
+        <p class="term-output">{profile.githubStats.publicRepos} repos / {profile.githubStats.followers} followers</p>
+        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> {t.home.focus}</p>
+        <ul class="terminal-list">
+          {t.home.focusItems.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+    </TerminalWindow>
+  </section>
+
+  <section class="section">
+    <SectionHeading eyebrow={t.home.capabilitiesEyebrow} title={t.home.capabilitiesTitle} />
+    <div class="skill-grid">
+      {copy.skills.map((skill) => <article class="skill"><h3>{skill.group}</h3><p>{skill.items.join(" · ")}</p></article>)}
+    </div>
+  </section>
+
+  <section class="section two-col">
+    <div>
+      <SectionHeading eyebrow={t.home.experienceEyebrow} title={t.home.experienceTitle} />
+      <Timeline items={copy.experience} />
+    </div>
+    <aside class="side-panel">
+      <h2>{t.home.highlights}</h2>
+      <ul>{copy.highlights.map((highlight) => <li>{highlight}</li>)}</ul>
+      <h2 class="panel-subtitle">{t.home.languages}</h2>
+      <ul>{copy.languages.map((language) => <li><strong>{language.name}</strong>: {language.level}</li>)}</ul>
+    </aside>
+  </section>
+
+  <section class="section">
+    <SectionHeading eyebrow={t.home.publicationsEyebrow} title={t.home.publicationsTitle} />
+    <div class="grid">
+      {copy.publications.map((publication) => (
+        <ArticleCard href={publication.link} title={publication.title} description={publication.description} meta={`${publication.year} / ${publication.venue}`} tags={publication.tags} />
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <SectionHeading eyebrow={t.home.projectsEyebrow} title={t.home.projectsTitle} />
+    <div class="grid">
+      {projects.map((project) => (
+        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${project.data.status}`} tags={project.data.tags} />
+      ))}
+    </div>
+  </section>
+
+  <section class="section two-col">
+    <div>
+      <SectionHeading eyebrow={t.home.blogEyebrow} title={t.home.blogTitle} />
+      <div class="stack">
+        {posts.map((post) => (
+          <ArticleCard href={pathFor(locale, `/blog/${contentSlug(post.id)}`)} title={post.data.title} description={post.data.description} meta={post.data.publishedAt.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })} tags={post.data.tags} />
+        ))}
+      </div>
+    </div>
+    <div>
+      <SectionHeading eyebrow={t.home.educationEyebrow} title={t.home.educationTitle} />
+      <Timeline items={copy.education} />
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,38 @@
+---
+import TerminalWindow from "@components/TerminalWindow.astro";
+import ContactReveal from "@components/ContactReveal.astro";
+import { locales, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export function getStaticPaths() {
+  return locales.map((lang) => ({ params: { lang }, props: { locale: lang } }));
+}
+
+const { locale } = Astro.props as { locale: Locale };
+const t = ui[locale];
+---
+
+<BaseLayout locale={locale} currentPath="/contact" title={`${t.pages.contactKicker} | Sergio Benlloch`}>
+  <section class="page-shell contact-page">
+    <div>
+      <p class="kicker">{t.pages.contactKicker}</p>
+      <h1>{t.pages.contactTitle}</h1>
+      <p class="lead">{t.pages.contactLead}</p>
+      <div class="actions">
+        <ContactReveal label={t.pages.email} variant="primary" />
+        <a class="button" href={profile.github} target="_blank" rel="noreferrer">github</a>
+        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">linkedin</a>
+      </div>
+    </div>
+    <TerminalWindow title="contact.sh">
+      <p><span class="shell">$</span> printf "%s\n" contact</p>
+      <p>email: <span class="redacted">revealed on click</span></p>
+      <p>location: {profile.location}</p>
+      <p>github: {profile.github}</p>
+      <p>linkedin: {profile.linkedin}</p>
+      <p><span class="shell">$</span> status</p>
+      <p>{t.pages.status}</p>
+    </TerminalWindow>
+  </section>
+</BaseLayout>

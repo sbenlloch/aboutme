@@ -1,0 +1,270 @@
+---
+import { terminalCommands } from "@data/terminal";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "session.log" } = Astro.props;
+---
+
+<section class="terminal-window terminal-interactive" data-terminal-window>
+  <div class="terminal-bar" data-terminal-handle>
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="dot"></span>
+    <span class="terminal-title">{title}</span>
+  </div>
+  <div class="terminal-body">
+    <div class="terminal-scrollback">
+      <div class="terminal-initial" data-terminal-initial>
+        <slot />
+      </div>
+      <div class="terminal-output-log" data-terminal-log aria-live="polite"></div>
+      <form class="terminal-command-form" data-terminal-form>
+        <label class="sr-only" for="terminal-command">Terminal command</label>
+        <span class="term-user" aria-hidden="true">sergio@secbox</span><span class="term-path" aria-hidden="true">:~$</span>
+        <input
+          id="terminal-command"
+          name="command"
+          type="text"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          inputmode="text"
+          placeholder="help"
+          aria-label="Type a portfolio command"
+          data-terminal-input
+        />
+      </form>
+    </div>
+  </div>
+</section>
+
+<script is:inline define:vars={{ commandResponses: terminalCommands }}>
+  const escapeHtml = (value) =>
+    value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+
+  const formatDuration = (milliseconds) => {
+    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}h ${minutes}m ${seconds}s`;
+  };
+
+  const sha256 = async (value) => {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  };
+
+  document.querySelectorAll("[data-terminal-window]").forEach((terminal) => {
+    if (terminal.dataset.ready === "true") return;
+    terminal.dataset.ready = "true";
+
+    const form = terminal.querySelector("[data-terminal-form]");
+    const input = terminal.querySelector("[data-terminal-input]");
+    const initial = terminal.querySelector("[data-terminal-initial]");
+    const log = terminal.querySelector("[data-terminal-log]");
+    const handle = terminal.querySelector("[data-terminal-handle]");
+    const body = terminal.querySelector(".terminal-body");
+    const desktopQuery = window.matchMedia("(min-width: 901px)");
+    const startedAt = new Date();
+    const commandHistory = ["whoami", "ls -la", "cat contact.txt", "papers", "projects"];
+    let heightLocked = false;
+    let followBottom = true;
+
+    const updateFollowBottom = () => {
+      const threshold = 24;
+      followBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - threshold;
+    };
+
+    body?.addEventListener("scroll", updateFollowBottom, { passive: true });
+    body?.addEventListener("click", () => input?.focus());
+    updateFollowBottom();
+
+    const lockInitialHeight = () => {
+      if (heightLocked) return;
+      terminal.dataset.staticHeight = "false";
+      terminal.style.removeProperty("--terminal-static-height");
+      const height = Math.ceil(terminal.getBoundingClientRect().height);
+      terminal.style.setProperty("--terminal-static-height", `${height}px`);
+      terminal.dataset.staticHeight = "true";
+      heightLocked = true;
+    };
+
+    const relockEmptyTerminal = () => {
+      if (log.children.length > 0) return;
+      heightLocked = false;
+      requestAnimationFrame(lockInitialHeight);
+    };
+
+    const scrollToBottom = () => {
+      if (!body) return;
+      body.scrollTop = body.scrollHeight;
+      updateFollowBottom();
+    };
+
+    const appendOutput = (command, lines) => {
+      const output = document.createElement("div");
+      output.className = "terminal-entry";
+      output.innerHTML = `<p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> ${escapeHtml(command)}</p>${lines
+        .map((line) => `<p class="term-output">${escapeHtml(line)}</p>`)
+        .join("")}`;
+      log.append(output);
+      if (followBottom) {
+        requestAnimationFrame(() => {
+          body.scrollTop = body.scrollHeight;
+          updateFollowBottom();
+        });
+      }
+    };
+
+    const dynamicResponse = async (rawCommand, command) => {
+      const [name = ""] = command.split(/\s+/);
+      const argument = rawCommand.slice(name.length).trim();
+      const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+
+      if (command === "date") {
+        return [new Date().toDateString()];
+      }
+
+      if (command === "time" || command === "now") {
+        return [new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "medium", timeZoneName: "short" }).format(new Date())];
+      }
+
+      if (command === "timezone" || command === "tz") {
+        return [Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"];
+      }
+
+      if (command === "uptime") {
+        return [`terminal session: ${formatDuration(Date.now() - startedAt.getTime())}`];
+      }
+
+      if (command === "history") {
+        return commandHistory.map((item, index) => `${index + 1}  ${item}`);
+      }
+
+      if (name === "echo") {
+        return [argument];
+      }
+
+      if (name === "hash" || name === "sha256") {
+        if (!argument) return ["usage: hash <text>"];
+        if (argument.length > 256) return ["input too long: max 256 characters"];
+        return [`sha256=${await sha256(argument)}`];
+      }
+
+      if (command === "uuid") {
+        return [crypto.randomUUID ? crypto.randomUUID() : "crypto.randomUUID is not available"];
+      }
+
+      if (command === "theme") {
+        return [`theme=${currentTheme}`];
+      }
+
+      if (command === "locale" || command === "lang") {
+        return [`locale=${document.documentElement.lang || "unknown"}`];
+      }
+
+      if (command === "viewport") {
+        return [`${window.innerWidth}x${window.innerHeight} dpr=${window.devicePixelRatio || 1}`];
+      }
+
+      if (command === "printenv") {
+        return [`LANG=${document.documentElement.lang || "en"}`, "SHELL=/bin/browser", `TERM=xterm-portfolio`, `THEME=${currentTheme}`];
+      }
+
+      return null;
+    };
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const rawCommand = input.value.trim();
+      const command = rawCommand.toLowerCase();
+      if (!command) return;
+      input.value = "";
+      commandHistory.push(rawCommand);
+
+      if (command === "clear") {
+        initial.textContent = "";
+        log.textContent = "";
+        requestAnimationFrame(scrollToBottom);
+        return;
+      }
+
+      const dynamicLines = await dynamicResponse(rawCommand, command);
+      appendOutput(rawCommand, dynamicLines ?? commandResponses[command] ?? [`command not found: ${rawCommand}`, "try: help"]);
+    });
+
+    let drag = null;
+    const resetPosition = () => {
+      if (!desktopQuery.matches) {
+        terminal.style.removeProperty("position");
+        terminal.style.removeProperty("left");
+        terminal.style.removeProperty("top");
+        terminal.style.removeProperty("right");
+        terminal.style.removeProperty("width");
+        terminal.style.removeProperty("z-index");
+      }
+    };
+
+    desktopQuery.addEventListener("change", resetPosition);
+    resetPosition();
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        lockInitialHeight();
+        scrollToBottom();
+      })
+    );
+    window.addEventListener("load", relockEmptyTerminal, { once: true });
+    window.addEventListener("resize", relockEmptyTerminal);
+
+    handle?.addEventListener("pointerdown", (event) => {
+      if (!desktopQuery.matches || event.button !== 0) return;
+      const rect = terminal.getBoundingClientRect();
+      drag = {
+        active: false,
+        startX: event.clientX,
+        startY: event.clientY,
+        originalLeft: rect.left,
+        originalTop: rect.top,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        width: rect.width
+      };
+      handle.setPointerCapture(event.pointerId);
+    });
+
+    handle?.addEventListener("pointermove", (event) => {
+      if (!drag) return;
+      const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+      if (!drag.active && moved < 6) return;
+      if (!drag.active) {
+        drag.active = true;
+        terminal.style.position = "fixed";
+        terminal.style.width = `${drag.width}px`;
+        terminal.style.left = `${drag.originalLeft}px`;
+        terminal.style.top = `${drag.originalTop}px`;
+        terminal.style.right = "auto";
+        terminal.style.zIndex = "30";
+      }
+      const maxLeft = window.innerWidth - drag.width - 12;
+      const maxTop = window.innerHeight - terminal.offsetHeight - 12;
+      const left = Math.min(Math.max(12, event.clientX - drag.offsetX), Math.max(12, maxLeft));
+      const top = Math.min(Math.max(12, event.clientY - drag.offsetY), Math.max(12, maxTop));
+      terminal.style.left = `${left}px`;
+      terminal.style.top = `${top}px`;
+    });
+
+    const stopDrag = (event) => {
+      if (!drag) return;
+      drag = null;
+      handle.releasePointerCapture?.(event.pointerId);
+    };
+
+    handle?.addEventListener("pointerup", stopDrag);
+    handle?.addEventListener("pointercancel", stopDrag);
+  });
+</script>

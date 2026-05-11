@@ -1,0 +1,37 @@
+---
+import { getCollection, render } from "astro:content";
+import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return locales.flatMap((locale) =>
+    projects
+      .filter((project) => project.data.locale === locale)
+      .map((project) => ({ params: { lang: locale, slug: project.id.split("/").pop() }, props: { project, locale } }))
+  );
+}
+
+const { project, locale } = Astro.props as { project: any; locale: Locale };
+const t = ui[locale];
+const { Content } = await render(project);
+const slug = project.id.split("/").pop();
+---
+
+<BaseLayout locale={locale} currentPath={`/projects/${slug}`} title={`${project.data.title} | Projects`} description={project.data.description}>
+  <article class="prose page-shell">
+    <a class="back-link" href={pathFor(locale, "/projects")}>{t.pages.backProjects}</a>
+    <p class="kicker">
+      {project.data.year} / {project.data.status}
+      {project.data.updatedAt && ` / ${t.pages.updated} ${project.data.updatedAt.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })}`}
+    </p>
+    <h1>{project.data.title}</h1>
+    <p class="lead">{project.data.description}</p>
+    <div class="tags page-tags">{project.data.tags.map((tag: string) => <span>#{tag}</span>)}</div>
+    <Content />
+    <div class="actions">
+      {project.data.link && <a class="button primary" href={project.data.link}>{t.pages.openProject}</a>}
+      {project.data.repo && <a class="button" href={project.data.repo} target="_blank" rel="noreferrer">{t.pages.source}</a>}
+    </div>
+  </article>
+</BaseLayout>

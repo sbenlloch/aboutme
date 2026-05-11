@@ -1,0 +1,36 @@
+---
+import type { experience, education } from "@data/resume";
+
+type ExperienceItem = (typeof experience)[number];
+type EducationItem = (typeof education)[number];
+
+interface Props {
+  items: Array<ExperienceItem | EducationItem>;
+}
+
+const { items } = Astro.props;
+---
+
+<div class="timeline">
+  {
+    items.map((item) => (
+      <article class="timeline-item">
+        <div>
+          <span class="period">{item.period}</span>
+          <h3>{"role" in item ? item.role : item.title}</h3>
+          <p class="muted">
+            {"company" in item ? item.company : item.school}
+            {"location" in item && item.location ? ` · ${item.location}` : ""}
+          </p>
+        </div>
+        {"points" in item ? (
+          <ul>
+            {item.points.map((point) => <li>{point}</li>)}
+          </ul>
+        ) : (
+          <p>{item.detail}</p>
+        )}
+      </article>
+    ))
+  }
+</div>
