@@ -33,6 +33,6 @@ Deployment uses GitHub Actions from `.github/workflows/deploy.yml`:
 
 1. Push the repository to GitHub with `main` as the default branch.
 2. In the repository settings, enable GitHub Pages with GitHub Actions as the source.
-3. Configure the domain DNS for GitHub Pages and keep `public/CNAME` set to `sergiobenlloch.dev`.
+3. Configure the domain DNS for GitHub Pages and keep `public/CNAME` set to `serg1o.dev`.
 
 The workflow builds `dist/` and uploads it to GitHub Pages.
