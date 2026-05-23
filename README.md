@@ -1,6 +1,6 @@
 # Sergio resume website
 
-Personal resume and portfolio site built with Astro for `sergiobenlloch.dev`.
+Personal resume and portfolio site built with Astro for `serg1o.dev`
 
 ## Current content direction
 
