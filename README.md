@@ -27,7 +27,7 @@ npm run preview
 
 ## GitHub Pages
 
-The site is configured for the custom domain `sergiobenlloch.dev`.
+The site is configured for the custom domain `serg1o.dev`.
 
 Deployment uses GitHub Actions from `.github/workflows/deploy.yml`:
 
