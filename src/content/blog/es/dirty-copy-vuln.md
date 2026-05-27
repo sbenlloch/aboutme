@@ -1,36 +1,36 @@
 ---
 title: "Copy Fail y Dirty Frag: escribir donde solo podías leer"
-description: "Una nota sobre Copy Fail, Dirty Frag y cómo dos vulnerabilidades de Linux muestran el peligro de tratar la page cache como si fuera un buffer cualquiera."
+description: "Una nota práctica sobre Copy Fail, Dirty Frag y por qué las escrituras en page cache rompen una frontera peligrosa dentro del kernel de Linux."
+locale: es
 publishedAt: 2026-05-23
 tags: ["linux-kernel", "vulnerability-research", "page-cache", "lpe", "dirty-frag", "copy-fail"]
 draft: false
 ---
 
-> **Nota:** este post es divulgativo. La explicación simplifica algunos detalles internos del kernel
+> **Nota:** este post es divulgativo. Evita pasos de explotación y simplifica algunos detalles internos del kernel.
 
-Hay bugs que parecen bugs, y bugs que parecen una advertencia.
+Hay bugs que parecen errores aislados. Otros parecen una advertencia.
 
-Copy Fail y Dirty Frag pertenecen más a la segunda categoría.
+Copy Fail y Dirty Frag pertenecen al segundo grupo.
 
-A primera vista, podríamos resumirlos de forma bastante aburrida: dos vulnerabilidades del kernel de Linux que permiten escalada local de privilegios. Otra LPE, otro PoC, otro día en internet.
+A primera vista, se pueden resumir de forma bastante seca: dos problemas del kernel de Linux que pueden acabar en escalada local de privilegios. Otra LPE, otro proof of concept, otro día en internet.
 
-Pero esa descripción se queda corta.
+Ese resumen sirve, pero se queda corto.
 
-Lo interesante de Copy Fail y Dirty Frag no es solo que acaben en root. Lo interesante es **dónde rompen el modelo mental**: en esa zona incómoda donde el kernel mueve datos de forma eficiente, evita copias innecesarias, reutiliza páginas de memoria y asume que todo el mundo está respetando las mismas reglas.
+Lo importante no es solo que estos bugs puedan terminar en root. Lo interesante es **dónde rompen el modelo mental**: en la zona donde el kernel mueve datos de forma eficiente, evita copias, reutiliza páginas de memoria y asume que cada subsistema sigue recordando qué representan esas páginas.
 
-Spoiler: no siempre las respeta.
+A veces esa suposición falla.
 
-## La idea corta
-
-La conexión entre ambas vulnerabilidades se puede explicar así:
-
-> El usuario solo puede leer un fichero, pero consigue que una ruta legítima del kernel escriba sobre la versión cacheada de ese fichero en memoria.
+<div class="callout callout-warning">
+  <strong>La idea central</strong>
+  <p>El usuario solo puede leer un fichero, pero consigue que una ruta legítima del kernel escriba sobre la versión cacheada de ese fichero en memoria.</p>
+</div>
 
 No escribe necesariamente en disco.
 
 No abre el fichero con permisos de escritura.
 
-No rompe la puerta.
+No rompe la puerta principal.
 
 Convence al edificio de que le deje pintar la pared por dentro.
 
@@ -38,202 +38,172 @@ La pared, en este caso, es la **page cache**.
 
 ## La page cache, ese sitio donde pasan demasiadas cosas
 
-La page cache está ahí para que leer ficheros sea rápido. Si un binario, una librería o un fichero se lee con frecuencia, Linux puede mantener páginas de ese contenido en memoria para no ir al disco cada vez.
+La page cache existe para que acceder a ficheros sea rápido. Si un binario, una librería compartida o un fichero leído con frecuencia ya está en memoria, Linux puede servir futuras lecturas sin volver al disco.
 
 Hasta aquí, todo bien.
 
-El problema aparece cuando esas páginas cacheadas empiezan a circular por subsistemas del kernel que no necesariamente las tratan como “contenido de un fichero que este usuario solo puede leer”.
+El problema empieza cuando esas páginas cacheadas circulan por rutas del kernel que dejan de tratarlas como "contenido de un fichero que este usuario solo puede leer" y empiezan a tratarlas como buffers normales.
 
-A veces las tratan como buffers.
+Y cuando un buffer se puede modificar, la frontera de seguridad se vuelve borrosa.
 
-Y si un buffer se puede modificar, tenemos fiesta.
+<div class="flow-diagram" aria-label="Ruta simplificada de escritura en page cache">
+  <div class="flow-node">usuario sin privilegios</div>
+  <div class="flow-arrow">lee</div>
+  <div class="flow-node">fichero solo lectura</div>
+  <div class="flow-arrow">se cachea como</div>
+  <div class="flow-node flow-hot">page cache</div>
+  <div class="flow-arrow">pasa por</div>
+  <div class="flow-node">crypto / red / otro subsistema</div>
+  <div class="flow-arrow">escritura in-place inesperada</div>
+  <div class="flow-node flow-danger">página cacheada modificada</div>
+</div>
 
-    usuario sin privilegios
-            |
-            | lee un fichero
-            v
-    +-------------------------+
-    | fichero solo lectura    |
-    +-------------------------+
-            |
-            | páginas cacheadas
-            v
-    +-------------------------+
-    |       PAGE CACHE        |
-    +-------------------------+
-            |
-            | ruta legítima del kernel
-            v
-    +-------------------------+
-    | crypto / network / ...  |
-    | procesamiento in-place  |
-    +-------------------------+
-            |
-            | escritura inesperada
-            v
-    +-------------------------+
-    | page cache modificada   |
-    | disco aparentemente OK  |
-    +-------------------------+
-            |
-            v
-         root :)
-
-Esta figura simplifica mucho, pero captura la parte importante: el ataque no consiste en tener permisos de escritura sobre el fichero. Consiste en conseguir que el kernel escriba en una página que representa contenido de ese fichero.
+La parte importante no es tener permisos de escritura sobre el fichero. La parte importante es conseguir que el kernel escriba en una página que representa ese fichero.
 
 ## Copy Fail: el bug que enseña la forma
 
-Copy Fail vive en una interacción entre `splice()`, `AF_ALG` y el subsistema criptográfico del kernel.
+Copy Fail está en la intersección entre `splice()`, `AF_ALG` y el subsistema criptográfico del kernel.
 
-La idea es bastante elegante: mediante `splice()`, un atacante puede hacer que páginas de la page cache de un fichero legible acaben conectadas a estructuras usadas por la ruta criptográfica. Después, una operación que no debería modificar ese contenido termina provocando una escritura controlada en la page cache.
+La forma general es elegante, como suelen serlo algunos bugs de kernel: `splice()` puede conectar páginas de la page cache respaldadas por un fichero con una ruta pensada para mover datos de forma eficiente. Después, una operación criptográfica que no debería mutar ese contenido termina provocando una escritura controlada en la page cache.
 
 Cuatro bytes no suenan a mucho.
 
 Pero cuatro bytes en el sitio correcto son una palanca.
 
-En seguridad, “solo puedo escribir cuatro bytes” muchas veces significa “puedo escribir cuatro bytes donde nadie esperaba que pudiera escribir absolutamente nada”. Y esa diferencia es enorme.
+En seguridad, "solo puedo escribir cuatro bytes" muchas veces significa "puedo escribir cuatro bytes donde nadie esperaba que pudiera escribir absolutamente nada". Esa diferencia es enorme.
 
-    splice()
-       |
-       v
-    page cache pages
-       |
-       v
-    AF_ALG socket
-       |
-       v
-    crypto path
-       |
-       v
-    in-place write
-       |
-       v
-    "ups"
+<div class="mini-trace">
+  <span>splice()</span>
+  <span>páginas de page cache</span>
+  <span>socket AF_ALG</span>
+  <span>ruta crypto</span>
+  <span>escritura in-place</span>
+  <span class="trace-alert">ups</span>
+</div>
 
-Lo más interesante de Copy Fail no es solo el bug en sí, sino la forma de encontrarlo. La investigación partió de una hipótesis humana: mirar qué ocurre cuando se combinan `AF_ALG`, `splice()` y páginas cuya procedencia real importa. Después, se usó automatización para escalar la búsqueda en una superficie de código demasiado grande para revisarla cómodamente a mano.
+Lo más interesante de Copy Fail no es solo el bug. Es cómo se planteó la investigación.
 
-Eso es una imagen bastante realista de la IA aplicada a vulnerability research.
+El punto de partida fue una hipótesis humana: ¿qué ocurre cuando se combinan `AF_ALG`, `splice()` y páginas cuya procedencia real importa? Después, la automatización ayudó a escalar esa hipótesis sobre una superficie de código demasiado grande para revisarla cómodamente a mano.
+
+Esa es una imagen realista de la IA aplicada a vulnerability research.
 
 No es:
 
-> “La IA encontró root.”
+> "La IA encontró root."
 
 Es más bien:
 
-> “Alguien tuvo una buena intuición, formuló una hipótesis concreta y usó herramientas para buscar variantes.”
+> "Alguien tuvo una intuición concreta, la convirtió en una hipótesis buscable y usó herramientas para encontrar variantes."
 
-Menos espectacular. Mucho más interesante.
+Menos cinematográfico. Mucho más útil.
 
-## Dirty Frag: cuando la pregunta cambia
+## Dirty Frag: cuando cambia la pregunta
 
-Dirty Frag aparece como la continuación natural de esa idea.
+Dirty Frag es la continuación natural de esa pregunta.
 
-Después de ver Copy Fail, la pregunta buena no es solo:
+Después de ver Copy Fail, lo importante no es solo:
 
-> “¿Cómo parcheamos este bug?”
+> "¿Cómo parcheamos este bug?"
 
-La pregunta interesante es:
+Es:
 
-> “¿Dónde más está el kernel haciendo algo parecido?”
+> "¿Dónde más está haciendo el kernel algo parecido?"
 
-Ahí empieza el trabajo de verdad.
+Ahí empieza el trabajo real de investigación.
 
 Dirty Frag lleva una clase de problema similar a rutas relacionadas con networking, especialmente `xfrm/ESP` y `RxRPC`.
 
-No es el mismo bug. No vive en el mismo sitio. No se explota exactamente igual.
+No es el mismo bug. No vive en el mismo subsistema. No se explota exactamente igual.
 
 Pero rima.
 
-Y en vulnerability research, cuando dos bugs riman, hay que escuchar.
+Y cuando dos bugs de kernel riman, conviene escuchar.
 
-    Copy Fail
-      └── crypto / AF_ALG / splice
-            └── page-cache write
-
-    Dirty Frag
-      ├── xfrm / ESP
-      │     └── page-cache write
-      |
-      └── RxRPC
-            └── page-cache write
+<div class="bug-grid">
+  <section>
+    <h3>Copy Fail</h3>
+    <p><code>splice()</code> + <code>AF_ALG</code> + ruta crypto</p>
+    <strong>Resultado:</strong>
+    <span>primitiva de escritura en page cache</span>
+  </section>
+  <section>
+    <h3>Dirty Frag</h3>
+    <p>rutas <code>xfrm/ESP</code> y <code>RxRPC</code></p>
+    <strong>Resultado:</strong>
+    <span>patrón similar de escritura donde solo debía haber lectura</span>
+  </section>
+</div>
 
 La conexión profunda no está en un nombre de función concreto. Está en el patrón:
 
-    1. Un usuario puede leer algo.
-    2. El kernel representa ese algo en page cache.
-    3. Una ruta eficiente evita copiar datos.
-    4. Otro subsistema recibe esas páginas como si fueran buffers normales.
-    5. Ese subsistema escribe in-place.
-    6. La frontera entre "leer" y "modificar" se rompe.
+<ol class="pattern-list">
+  <li>Un usuario puede leer algo.</li>
+  <li>El kernel representa ese contenido en la page cache.</li>
+  <li>Una ruta eficiente evita copiar datos.</li>
+  <li>Otro subsistema recibe esas páginas como si fueran buffers normales.</li>
+  <li>Ese subsistema escribe in-place.</li>
+  <li>La frontera entre "leer" y "modificar" se rompe.</li>
+</ol>
 
-Ese patrón es más importante que el CVE individual.
-
-Porque cuando entiendes el patrón, puedes empezar a buscar variantes.
+Ese patrón importa más que cualquier CVE individual, porque cuando lo entiendes puedes empezar a buscar variantes.
 
 ## No es solo memoria. No es solo disco.
 
-Esta parte me parece especialmente bonita, en el sentido oscuro de la palabra.
+Esta es la parte que me parece especialmente interesante.
 
 Cuando hablamos de corrupción de memoria, solemos imaginar heap, stack, punteros, objetos liberados o estructuras internas del kernel.
 
-Cuando hablamos de permisos de ficheros, pensamos en disco: owner, mode bits, setuid, hashes, integridad.
+Cuando hablamos de permisos de ficheros, pensamos en disco: propietarios, mode bits, binarios setuid, hashes, comprobaciones de integridad.
 
-Pero estos bugs viven en medio.
+Estos bugs viven entre esos dos mundos.
 
-        no es solo fichero
-              |
-              v
-        +-------------+
-        | page cache  |
-        +-------------+
-              ^
-              |
-        no es solo memoria
+<div class="bridge-card">
+  <span>no es solo un fichero</span>
+  <strong>page cache</strong>
+  <span>no es solo memoria anónima</span>
+</div>
 
-La page cache es puente.
+La page cache es un puente. Atacar el puente puede ser más interesante que atacar cualquiera de las dos orillas.
 
-Y atacar un puente suele ser más interesante que atacar una orilla.
+El fichero en disco puede seguir intacto. Las herramientas que solo verifican hashes en disco pueden no ver nada extraño. Los permisos pueden parecer normales. Pero la vista cacheada que el sistema usa realmente puede haber sido modificada.
 
-El fichero en disco puede seguir intacto. Las herramientas que miran checksums del disco pueden no ver nada raro. Pero la vista cacheada que usa el sistema puede estar modificada.
-
-Ese detalle es lo que hace que estas vulnerabilidades recuerden inevitablemente a Dirty Pipe. No porque sean idénticas, sino porque obligan a mirar la page cache como una superficie de ataque de primer orden.
+Ese detalle es lo que hace que estos problemas recuerden inevitablemente a Dirty Pipe. No son el mismo bug, pero obligan a aceptar la misma lección incómoda: la page cache no es un detalle pasivo de implementación. Es una superficie de ataque.
 
 ## Fallos de composición
 
 Hay una forma sencilla de escribir bugs en C: equivocarte tú solo.
 
-Y luego está la forma divertida: que dos subsistemas tengan razón por separado y se equivoquen juntos.
+Luego está la forma más interesante: que dos subsistemas sean razonables por separado y peligrosos juntos.
 
 Copy Fail y Dirty Frag huelen a eso.
 
 Un mecanismo dice:
 
-> “Voy a evitar una copia, porque copiar es caro.”
+> "Voy a evitar una copia, porque copiar es caro."
 
 Otro dice:
 
-> “Voy a procesar estos datos in-place, porque es eficiente.”
+> "Voy a procesar estos datos in-place, porque es eficiente."
 
 Otro ya había decidido:
 
-> “Este usuario solo puede leer este fichero.”
+> "Este usuario solo puede leer este fichero."
 
-Cada decisión aislada puede tener sentido.
+Cada decisión aislada puede tener sentido. El problema aparece cuando se juntan.
 
-El problema aparece cuando se juntan.
+<div class="equation-box">
+  <span>rendimiento</span>
+  <span>+</span>
+  <span>abstracciones reutilizables</span>
+  <span>+</span>
+  <span>permisos decididos antes</span>
+  <span>+</span>
+  <span>origen ambiguo del buffer</span>
+  <span>=</span>
+  <strong>fallo de frontera</strong>
+</div>
 
-    rendimiento
-        +
-    abstracciones reutilizables
-        +
-    permisos decididos antes
-        +
-    buffers con procedencia ambigua
-        =
-    bug muy gracioso
-    excepto si eres el equipo de kernel
-
-Este tipo de fallo es especialmente atractivo para un investigador porque no suele estar en el sitio obvio. No es necesariamente una función con un `memcpy()` sospechoso gritando “mírame”.
+Este tipo de fallo es atractivo para un investigador porque rara vez está en el sitio obvio. No es necesariamente un `memcpy()` sospechoso pidiendo atención.
 
 Es una propiedad emergente del sistema.
 
@@ -241,52 +211,44 @@ Y las propiedades emergentes son donde el kernel se pone interesante.
 
 ## Publicar también es parte del bug
 
-La publicación de estas vulnerabilidades también cuenta una historia.
+La publicación de estas vulnerabilidades cuenta una segunda historia.
 
-Copy Fail tuvo una narrativa bastante limpia: investigación, reporte, parche y write-up. Además, venía con el componente de búsqueda asistida por IA, lo que la hizo especialmente llamativa.
+Copy Fail tuvo una narrativa relativamente limpia: investigación, reporte, parche y write-up. El ángulo de búsqueda asistida por IA lo hizo especialmente visible, pero la lección de seguridad es más antigua y profunda que la herramienta.
 
-Dirty Frag fue más caótica. Según la información pública, el problema se reportó bajo embargo, pero la publicación acabó adelantándose por factores externos. Eso cambió la dinámica: defensores y vendors tuvieron que reaccionar mientras los detalles técnicos ya circulaban.
+Dirty Frag fue más caótica. La información pública describe un proceso de disclosure que se volvió más urgente de lo esperado, y eso cambió la dinámica para maintainers, distribuciones, vendors y equipos de defensa.
 
-La vida de una vulnerabilidad no acaba cuando alguien consigue root en su máquina.
+La vida de una vulnerabilidad no acaba cuando alguien consigue root en una máquina de pruebas.
 
 Después viene la parte social del bug:
 
-    researcher
-       |
-       v
-    maintainers
-       |
-       v
-    distros
-       |
-       v
-    vendors
-       |
-       v
-    detections
-       |
-       v
-    admins intentando dormir
+<div class="mini-trace mini-trace-muted">
+  <span>researcher</span>
+  <span>maintainers</span>
+  <span>distros</span>
+  <span>vendors</span>
+  <span>detecciones</span>
+  <span>admins intentando dormir</span>
+</div>
 
-Cuando un bug es fácil de explotar, afecta a configuraciones comunes y vive en el kernel, el disclosure deja de ser un trámite. Se convierte en una carrera entre parches, mitigaciones, PoCs, detecciones y gente copiando comandos de GitHub con demasiada alegría.
+Cuando un bug de kernel es práctico, afecta a configuraciones comunes y tiene detalles técnicos públicos, el disclosure deja de ser un trámite. Se convierte en una carrera entre parches, mitigaciones, proof-of-concept, detecciones y gente copiando comandos de GitHub con demasiada confianza.
 
 ## Una nota incómoda sobre impacto
 
-La parte tentadora de este tipo de bugs es pensar en ellos como una forma rápida de “editar algo sensible y funcionar”.
+La forma tentadora de pensar en estos bugs es verlos como una ruta rápida para "editar algo sensible y que funcione".
 
 Un binario privilegiado, una librería usada por root, una decisión de autenticación o cualquier otro punto de confianza del sistema pueden parecer objetivos naturales cuando tienes una primitiva de escritura sobre page cache.
 
-Pero la gracia no está necesariamente en cambiar el disco para siempre.
+Pero el truco no consiste necesariamente en cambiar el disco para siempre.
 
-A veces lo interesante es justo lo contrario: alterar temporalmente la vista cacheada que el sistema usa en ese momento, mientras el fichero real sigue pareciendo intacto. El atacante no necesita que el cambio sea elegante ni duradero si solo necesita cruzar una frontera una vez.
+A veces lo interesante es justo lo contrario: alterar temporalmente la vista cacheada que el sistema usa en ese momento mientras el fichero real sigue pareciendo intacto. El atacante no necesita que el cambio sea elegante ni duradero si solo tiene que cruzar una frontera una vez.
 
-Por eso, desde defensa, la pregunta no debería ser solo:
+Desde defensa, la pregunta no debería ser solo:
 
-> “¿Ha cambiado este fichero en disco?”
+> "¿Ha cambiado este fichero en disco?"
 
 También debería ser:
 
-> “¿Qué proceso ha conseguido que el kernel trate contenido de solo lectura como un buffer modificable?”
+> "¿Qué proceso ha conseguido que el kernel trate contenido de solo lectura como un buffer escribible?"
 
 Esa diferencia importa.
 
@@ -294,9 +256,26 @@ El disco puede parecer limpio. Los permisos pueden parecer normales. Los hashes 
 
 Ahí está la parte incómoda.
 
+## Ideas defensivas
+
+<div class="takeaway-grid">
+  <section>
+    <h3>Para revisar kernel</h3>
+    <p>Hay que distinguir si una página son solo bytes a procesar o contenido respaldado por un fichero con semántica de permisos.</p>
+  </section>
+  <section>
+    <h3>Para defender sistemas</h3>
+    <p>No basta con mirar integridad en disco si el comportamiento sospechoso puede venir de una vista cacheada y transitoria.</p>
+  </section>
+  <section>
+    <h3>Para investigar</h3>
+    <p>Busca rutas eficientes que pasen páginas de fichero a subsistemas capaces de mutarlas in-place.</p>
+  </section>
+</div>
+
 ## Conclusión
 
-Copy Fail y Dirty Frag son buenos recordatorios de que los bugs más interesantes no siempre viven en una línea concreta. A veces viven en las costuras.
+Copy Fail y Dirty Frag son buenos recordatorios de que los bugs más interesantes no siempre viven en una línea concreta. A veces viven entre fronteras.
 
 Entre crypto y filesystem.
 
@@ -304,14 +283,19 @@ Entre networking y memoria.
 
 Entre rendimiento y seguridad.
 
-Entre “esto solo evita una copia” y “acabamos de escribir donde solo podíamos leer”.
+Entre "esto solo evita una copia" y "acabamos de escribir donde solo podíamos leer".
 
-La page cache no es solo una optimización transparente. Es una zona compartida, caliente y muy sensible del kernel.
+La page cache no es solo una optimización transparente. Es una zona compartida, caliente y sensible del kernel.
 
-Y cada vez que una página cacheada entra en una ruta que puede escribir in-place, merece la pena hacerse la pregunta incómoda:
+Cada vez que una página cacheada entra en una ruta que puede escribir in-place, merece la pena hacerse la pregunta incómoda:
 
 > ¿Estamos modificando un buffer, o estamos modificando algo que representa un fichero que nadie debería poder tocar?
 
 Copy Fail hizo visible la pregunta.
 
 Dirty Frag demostró que merecía la pena seguir preguntando.
+
+## Lecturas
+
+- [Write-up de Copy Fail](https://copy.fail/)
+- [Advisory de Dirty Frag](https://dirtyfrag.com/)
