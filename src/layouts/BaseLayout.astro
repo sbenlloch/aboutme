@@ -86,5 +86,40 @@ const navItems = [
         applyThemeLabel();
       });
     </script>
+    <script is:inline>
+      if (!window.__sergioDebugWink) {
+        window.__sergioDebugWink = true;
+
+        const accent = 'color:#65e6a7;font-weight:700;font-family:monospace;';
+        const warm = 'color:#ffc069;font-family:monospace;';
+        const cool = 'color:#82b7ff;font-family:monospace;';
+        const muted = 'color:#9fb3a1;font-family:monospace;';
+
+        console.log('%csergio@secbox%c browser console attached', accent, muted);
+        console.log('%c> alias sudo="please"%c\nplease still won\'t fix race conditions, but morale improves.', warm, muted);
+        console.log('%c> welcome to the side channel', cool);
+
+        console.table([
+          { signal: 'role', value: 'R&D Security Engineer' },
+          { signal: 'focus', value: 'security assessment / reversing / crypto / AI security' },
+          { signal: 'status', value: 'shipping with intent' },
+          { signal: 'coffee', value: 'probably hot' }
+        ]);
+
+        console.groupCollapsed('%coperator hints', accent);
+        console.log('%c- Browse the site, not just the DOM.', muted);
+        console.log('%c- The terminal is intentional, not decorative.', muted);
+        console.log('%c- If you found the console, you were meant to.', muted);
+        console.groupEnd();
+
+        window.secbox = Object.freeze({
+          whoami: 'sergio@secbox',
+          motto: 'build carefully, break precisely',
+          easterEgg: () => 'rm -rf /anxiety && sudo please'
+        });
+
+        console.log('%ctype secbox in the console if you want one more breadcrumb.', cool);
+      }
+    </script>
   </body>
 </html>

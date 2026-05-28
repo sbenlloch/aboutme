@@ -8,8 +8,8 @@ export const profile = {
   github: "https://github.com/sbenlloch",
   linkedin: "https://www.linkedin.com/in/sergio-benlloch/",
   avatar: "/profile-avatar.jpg",
-  company: "ITI - Instituto Tecnológico de Informática",
-  githubBio: "Computer engineer. Cybersecurity. Python, Go, C, Rust and Bash.",
+  company: "ITI - Instituto Tecnologico de Informatica",
+  githubBio: "Computer engineer. Security research, reversing, cryptography, AI security.",
   githubStats: {
     publicRepos: 10,
     followers: 18,
@@ -20,5 +20,11 @@ export const profile = {
     connections: "500+"
   },
   summary:
-    "Computer engineer specialized in Computer Engineering, currently working as an R&D Security Engineer on practical security assessment, reverse engineering, cryptography, AI security, and robust mitigation work with engineering teams."
+    "Computer engineer specialized in Computer Engineering, currently working as an R&D Security Engineer on practical security assessment, reverse engineering, cryptography, AI security, and robust mitigation work with engineering teams.",
+  availability: [
+    "penetration testing",
+    "security research",
+    "reverse engineering",
+    "secure development and review"
+  ]
 };
