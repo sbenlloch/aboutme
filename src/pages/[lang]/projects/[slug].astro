@@ -30,8 +30,8 @@ const slug = project.id.split("/").pop();
     <div class="tags page-tags">{project.data.tags.map((tag: string) => <span>#{tag}</span>)}</div>
     <Content />
     <div class="actions">
-      {project.data.link && <a class="button primary" href={project.data.link}>{t.pages.openProject}</a>}
-      {project.data.repo && <a class="button" href={project.data.repo} target="_blank" rel="noreferrer">{t.pages.source}</a>}
+      {project.data.link && <a class="button primary" href={project.data.link}>{t.common.openProject}</a>}
+      {project.data.repo && <a class="button" href={project.data.repo} target="_blank" rel="noreferrer">{t.common.source}</a>}
     </div>
   </article>
 </BaseLayout>

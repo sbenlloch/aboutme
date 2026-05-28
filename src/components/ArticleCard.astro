@@ -24,39 +24,41 @@ const { href, title, description, meta, tags, repo, external = false } = Astro.p
 </article>
 
 <script is:inline>
-  const repoPathFromUrl = (url) => {
-    try {
-      const parsed = new URL(url);
-      const parts = parsed.pathname.split("/").filter(Boolean);
-      if (parsed.hostname !== "github.com" || parts.length < 2) return null;
-      return `${parts[0]}/${parts[1]}`;
-    } catch {
-      return null;
-    }
-  };
-
-  document.querySelectorAll("[data-repo-card]").forEach(async (card) => {
-    if (card.dataset.githubReady === "true") return;
+  (() => {
+    const card = document.currentScript?.previousElementSibling;
+    if (!(card instanceof HTMLElement) || card.dataset.githubReady === "true") return;
     card.dataset.githubReady = "true";
+
+    const repoPathFromUrl = (url) => {
+      try {
+        const parsed = new URL(url);
+        const parts = parsed.pathname.split("/").filter(Boolean);
+        if (parsed.hostname !== "github.com" || parts.length < 2) return null;
+        return `${parts[0]}/${parts[1]}`;
+      } catch {
+        return null;
+      }
+    };
 
     const repoPath = repoPathFromUrl(card.dataset.repoUrl || "");
     const meta = card.querySelector("[data-repo-meta]");
     if (!repoPath || !meta) return;
 
-    try {
-      const response = await fetch(`https://api.github.com/repos/${repoPath}`, {
-        headers: { Accept: "application/vnd.github+json" }
+    fetch(`https://api.github.com/repos/${repoPath}`, {
+      headers: { Accept: "application/vnd.github+json" }
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((repo) => {
+        if (!repo) return;
+        const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        });
+        meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+      })
+      .catch(() => {
+        // Static metadata is already rendered, so the card remains usable offline.
       });
-      if (!response.ok) return;
-      const repo = await response.json();
-      const pushed = new Date(repo.pushed_at).toLocaleDateString(document.documentElement.lang || undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric"
-      });
-      meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
-    } catch {
-      // Static metadata is already rendered, so the card remains usable offline.
-    }
-  });
+  })();
 </script>

@@ -2,24 +2,24 @@ import { profile } from "./profile";
 
 export const skills = [
   {
-    group: "Penetration Testing",
+    group: "Assessment",
     items: ["Manual assessments", "Vulnerability analysis", "Source code audits", "Threat modeling"]
   },
   {
-    group: "Offensive Security",
-    items: ["Reverse engineering", "ARM/x86", "Firmware analysis", "PoC development"]
-  },
-  {
-    group: "Privacy-Enhancing Technologies",
-    items: ["Homomorphic encryption", "TEEs", "Differential privacy", "MPC"]
+    group: "Reverse Engineering",
+    items: ["Executable triage", "ARM/x86", "Firmware analysis", "PoC development"]
   },
   {
     group: "Cryptography",
-    items: ["Applied cryptography", "Post-quantum cryptography", "Secure implementations", "Protocol review", "Risk modeling"]
+    items: ["Applied cryptography", "Protocol review", "Post-quantum cryptography", "Secure implementations"]
   },
   {
     group: "AI Security",
-    items: ["AI security reviews", "Threat modeling", "Misuse analysis", "Secure ML pipelines"]
+    items: ["Threat modeling", "Misuse analysis", "Secure ML pipelines", "Adversarial review"]
+  },
+  {
+    group: "Privacy Tech",
+    items: ["Homomorphic encryption", "TEEs", "Differential privacy", "MPC"]
   },
   {
     group: "Engineering",
@@ -30,12 +30,13 @@ export const skills = [
 export const experience = [
   {
     role: "Security Researcher",
-    company: "ITI - Instituto Tecnológico de Informática",
+    company: "ITI - Instituto Tecnologico de Informatica",
     location: "Valencia, Spain (Hybrid)",
     period: "June 2023 - Present",
     points: [
-      "Work on security research and security engineering tasks.",
-      "Focus areas include PETs, cryptography, AI security, and DevSecOps."
+      "Work on security research and security engineering tasks with practical assessment and delivery constraints.",
+      "Focus areas include PETs, cryptography, AI security, DevSecOps and mitigation work that engineering teams can implement.",
+      "Operate across research, prototyping, review and technical communication depending on the problem surface."
     ]
   },
   {
@@ -44,32 +45,33 @@ export const experience = [
     location: "Valencia, Spain",
     period: "December 2021 - January 2023",
     points: [
-      "Worked in security research using Python and Bash.",
-      "Reviewed binaries as part of security assessment work."
+      "Worked in security research using Python and Bash with a strong practical bias.",
+      "Reviewed binaries and low-level artifacts as part of security assessment work.",
+      "Built and adapted internal tooling to speed up repetitive analyst workflows."
     ]
   }
 ];
 
 export const education = [
   {
-    title: "CRIPTOGRAFÍA MATEMÁTICAMENTE DEMOSTRABLE",
-    school: "Universitat Politècnica de València (UPV)",
+    title: "CRIPTOGRAFIA MATEMATICAMENTE DEMOSTRABLE",
+    school: "Universitat Politecnica de Valencia (UPV)",
     period: "Issued April 2026",
     detail:
       "Credential ID FCP1SYW4LJL. Public LinkedIn certification entry for mathematically demonstrable cryptography."
   },
   {
     title: "Master's in Cybersecurity and Cyberintelligence (MUCC)",
-    school: "Universitat Politècnica de València (UPV)",
+    school: "Universitat Politecnica de Valencia (UPV)",
     period: "September 2021 - June 2023",
     detail:
-      "Focused on protecting information and communication systems through vulnerability analysis, secure development, and threat intelligence generation."
+      "Focused on protecting information and communication systems through vulnerability analysis, secure development and threat intelligence generation."
   },
   {
     title: "Bachelor's in Computer Engineering",
-    school: "Universitat Politècnica de València (UPV)",
+    school: "Universitat Politecnica de Valencia (UPV)",
     period: "2017 - 2021",
-    detail: "Focused on computer science fundamentals, software engineering, system architecture, and low-level programming."
+    detail: "Focused on software engineering, system architecture and low-level programming foundations."
   }
 ];
 
@@ -81,9 +83,9 @@ export const languages = [
 
 export const highlights = [
   "Builds scripts and tools to automate repetitive security assessment workflows.",
-      "Applies ML techniques including CNNs and Transformers to anomaly detection, security analytics, and AI security reviews.",
-  "Connects academic work on binary optimization, executable-file intelligence, and secure IoT architecture.",
-  "Writes findings in a way that is useful for both engineering and decision making.",
+  "Applies ML techniques including CNNs and Transformers to anomaly detection, security analytics and AI security reviews.",
+  "Connects academic work on binary optimization, executable-file intelligence and secure IoT architecture.",
+  "Writes findings so engineering and decision makers can act on them.",
   "Works well in research and product contexts where the problem is not fully defined yet."
 ];
 
@@ -93,25 +95,25 @@ export const publications = [
     venue: "arXiv / Computing Conference 2026",
     year: 2025,
     description:
-      "Security architecture and threat modeling for microphone-equipped IoT nodes using remote attestation, mutually authenticated TLS, post-quantum resilience, and secure update/data handling.",
+      "Threat modeling and security architecture for microphone-equipped IoT nodes using remote attestation, mutually authenticated TLS, post-quantum resilience and secure update handling.",
     tags: ["iot-security", "threat-modeling", "post-quantum"],
     link: "https://arxiv.org/abs/2509.14657"
   },
   {
-    title: "Inteligencia de archivos binarios",
+    title: "Master's thesis: binary file intelligence",
     venue: "RIUNET / UPV Master's thesis",
     year: 2023,
     description:
-      "Automated binary characterization and machine-learning modeling for executable files, framed as a cyberintelligence pipeline for security decision support.",
+      "Automated binary characterization and machine-learning modeling for executable files, framed as a cyberintelligence support layer rather than a replacement for manual analysis.",
     tags: ["binary-analysis", "machine-learning", "cyberintelligence"],
     link: "https://riunet.upv.es/entities/publication/02c1368b-5aef-45df-8532-309e605a8535"
   },
   {
-    title: "Exploración del espacio de diseño multiobjetivo para ficheros binarios",
+    title: "Binary multi-objective design-space exploration",
     venue: "RIUNET / UPV Bachelor's thesis",
     year: 2021,
     description:
-      "Design-space exploration for GCC compilation flags to balance executable size, execution time, CPU and memory use, and binary robustness.",
+      "Design-space exploration for GCC compilation flags to balance executable size, execution time, CPU and memory use and binary robustness.",
     tags: ["gcc", "optimization", "binary-robustness"],
     link: "https://riunet.upv.es/entities/publication/4e6a5709-ca0e-4c5e-8f04-2386af404e0e"
   }
@@ -129,44 +131,45 @@ export const resumeCopy = {
     publications
   },
   es: {
-    role: "Ingeniero Informático especializado en seguridad",
+    role: "Ingeniero de seguridad en I+D",
     summary:
-      "Ingeniero informático especializado en Ingeniería de Computadores. Trabajo como R&D Security Engineer, con una parte bastante práctica: evaluaciones manuales, reversing, seguridad hardware, criptografía, seguridad en IA y mitigaciones que los equipos puedan aplicar.",
+      "Ingeniero informatico especializado en Ingenieria de Computadores. Trabajo como R&D Security Engineer con una parte claramente practica: evaluaciones manuales, reversing, seguridad hardware, criptografia, seguridad en IA y mitigaciones que los equipos puedan aplicar.",
     skills: [
       {
-        group: "Pentesting",
-        items: ["Evaluaciones manuales", "Análisis de vulnerabilidades", "Auditorías de código", "Modelado de amenazas"]
+        group: "Assessment",
+        items: ["Evaluaciones manuales", "Analisis de vulnerabilidades", "Auditorias de codigo", "Modelado de amenazas"]
       },
       {
-        group: "Seguridad ofensiva",
-        items: ["Reverse engineering", "ARM/x86", "Análisis de firmware", "Desarrollo de PoC"]
+        group: "Reverse Engineering",
+        items: ["Triage de ejecutables", "ARM/x86", "Analisis de firmware", "Desarrollo de PoC"]
       },
       {
-        group: "Tecnologías de privacidad",
-        items: ["Cifrado homomórfico", "TEEs", "Privacidad diferencial", "MPC"]
-      },
-      {
-        group: "Criptografía",
-        items: ["Criptografía aplicada", "Criptografía post-cuántica", "Implementaciones seguras", "Revisión de protocolos", "Modelado de riesgo"]
+        group: "Criptografia",
+        items: ["Criptografia aplicada", "Revision de protocolos", "Criptografia post-cuantica", "Implementaciones seguras"]
       },
       {
         group: "Seguridad en IA",
-        items: ["Revisiones de seguridad en IA", "Modelado de amenazas", "Análisis de abuso", "Pipelines ML seguros"]
+        items: ["Threat modeling", "Analisis de abuso", "Pipelines ML seguros", "Revision adversarial"]
       },
       {
-        group: "Ingeniería",
-        items: ["Python", "Go", "C", "Java", "Bash", "Linux", "Automatización"]
+        group: "Tecnologias de privacidad",
+        items: ["Cifrado homomorfico", "TEEs", "Privacidad diferencial", "MPC"]
+      },
+      {
+        group: "Ingenieria",
+        items: ["Python", "Go", "C", "Java", "Bash", "Linux", "Automatizacion"]
       }
     ],
     experience: [
       {
         role: "R&D Security Engineer",
-        company: "ITI - Instituto Tecnológico de Informática",
+        company: "ITI - Instituto Tecnologico de Informatica",
         location: "Valencia, Spain (Hybrid)",
         period: "Junio 2023 - Actualidad",
         points: [
-          "Trabajo en tareas de investigación en seguridad e ingeniería de seguridad.",
-          "Trabajo en PETs, criptografía, seguridad en IA y DevSecOps."
+          "Trabajo en investigacion en seguridad e ingenieria de seguridad con restricciones reales de entrega.",
+          "Me muevo entre PETs, criptografia, seguridad en IA, DevSecOps y mitigaciones aplicables para equipos de ingenieria.",
+          "Combino investigacion, prototipado, revision y comunicacion tecnica segun lo que pida el problema."
         ]
       },
       {
@@ -175,44 +178,45 @@ export const resumeCopy = {
         location: "Valencia, Spain",
         period: "Diciembre 2021 - Enero 2023",
         points: [
-          "Trabajé en investigación en seguridad usando Python y Bash.",
-          "Revisé binarios como parte del trabajo de evaluación de seguridad."
+          "Trabaje en investigacion en seguridad usando Python y Bash con un sesgo muy practico.",
+          "Revise binarios y artefactos de bajo nivel como parte de trabajos de evaluacion.",
+          "Construi y adapte tooling interno para acelerar flujos repetitivos de analista."
         ]
       }
     ],
     education: [
       {
-        title: "CRIPTOGRAFÍA MATEMÁTICAMENTE DEMOSTRABLE",
-        school: "Universitat Politècnica de València (UPV)",
-        period: "Expedición: abril 2026",
+        title: "CRIPTOGRAFIA MATEMATICAMENTE DEMOSTRABLE",
+        school: "Universitat Politecnica de Valencia (UPV)",
+        period: "Expedicion: abril 2026",
         detail:
-          "ID de credencial FCP1SYW4LJL. Certificación pública en LinkedIn sobre criptografía matemáticamente demostrable."
+          "ID de credencial FCP1SYW4LJL. Certificacion publica en LinkedIn sobre criptografia matematicamente demostrable."
       },
       {
-        title: "Máster en Ciberseguridad y Ciberinteligencia (MUCC)",
-        school: "Universitat Politècnica de València (UPV)",
+        title: "Master en Ciberseguridad y Ciberinteligencia (MUCC)",
+        school: "Universitat Politecnica de Valencia (UPV)",
         period: "Septiembre 2021 - Junio 2023",
         detail:
-          "Formación orientada a proteger sistemas de información y comunicación mediante análisis de vulnerabilidades, desarrollo seguro y generación de inteligencia de amenazas."
+          "Formacion orientada a proteger sistemas de informacion y comunicacion mediante analisis de vulnerabilidades, desarrollo seguro y generacion de inteligencia de amenazas."
       },
       {
-        title: "Grado en Ingeniería Informática, especialidad Ingeniería de Computadores",
-        school: "Universitat Politècnica de València (UPV)",
+        title: "Grado en Ingenieria Informatica, especialidad Ingenieria de Computadores",
+        school: "Universitat Politecnica de Valencia (UPV)",
         period: "2017 - 2021",
-        detail: "Base en fundamentos de informática, ingeniería del software, arquitectura de sistemas y programación de bajo nivel."
+        detail: "Base en fundamentos de informatica, ingenieria del software, arquitectura de sistemas y programacion de bajo nivel."
       }
     ],
     languages: [
-      { name: "Español", level: "Competencia bilingüe o nativa" },
-      { name: "Catalán", level: "Competencia bilingüe o nativa" },
-      { name: "Inglés", level: "Competencia profesional completa" }
+      { name: "Espanol", level: "Competencia bilingue o nativa" },
+      { name: "Catalan", level: "Competencia bilingue o nativa" },
+      { name: "Ingles", level: "Competencia profesional completa" }
     ],
     highlights: [
-      "Construyo scripts y herramientas para automatizar flujos repetitivos de evaluación de seguridad.",
-      "Aplico técnicas de ML, incluyendo CNNs y Transformers, a detección de anomalías, analítica de seguridad y revisiones de seguridad en IA.",
-      "Conecto trabajos académicos sobre optimización binaria, inteligencia de ejecutables y arquitectura segura para IoT.",
-      "Escribo hallazgos pensados para que ingeniería y negocio puedan decidir con contexto.",
-      "Trabajo bien en investigación y producto cuando el problema aún no está completamente cerrado."
+      "Construyo scripts y herramientas para automatizar flujos repetitivos de evaluacion de seguridad.",
+      "Aplico tecnicas de ML, incluyendo CNNs y Transformers, a deteccion de anomalias, analitica de seguridad y revisiones de seguridad en IA.",
+      "Conecto trabajos academicos sobre optimizacion binaria, inteligencia de ejecutables y arquitectura segura para IoT.",
+      "Escribo hallazgos pensados para que ingenieria y negocio puedan decidir con contexto.",
+      "Trabajo bien en investigacion y producto cuando el problema aun no esta completamente cerrado."
     ],
     publications: [
       {
@@ -220,25 +224,25 @@ export const resumeCopy = {
         venue: "arXiv / Computing Conference 2026",
         year: 2025,
         description:
-          "Arquitectura de seguridad y modelado de amenazas para nodos IoT con micrófono usando attestation remota, TLS mutuo, resiliencia post-cuántica y protección de actualizaciones y datos.",
+          "Arquitectura de seguridad y modelado de amenazas para nodos IoT con microfono usando attestation remota, TLS mutuo, resiliencia post-cuantica y proteccion de actualizaciones y datos.",
         tags: ["iot-security", "threat-modeling", "post-quantum"],
         link: "https://arxiv.org/abs/2509.14657"
       },
       {
-        title: "Inteligencia de archivos binarios",
+        title: "TFM: inteligencia de archivos binarios",
         venue: "RIUNET / TFM UPV",
         year: 2023,
         description:
-          "Caracterización binaria automatizada y modelado con aprendizaje automático para ejecutables, como pipeline de ciberinteligencia para apoyar decisiones de seguridad.",
+          "Caracterizacion binaria automatizada y modelado con aprendizaje automatico para ejecutables, planteado como capa de apoyo y no como sustituto del analisis manual.",
         tags: ["binary-analysis", "machine-learning", "cyberintelligence"],
         link: "https://riunet.upv.es/entities/publication/02c1368b-5aef-45df-8532-309e605a8535"
       },
       {
-        title: "Exploración del espacio de diseño multiobjetivo para ficheros binarios",
+        title: "TFG: exploracion del espacio de diseno multiobjetivo para binarios",
         venue: "RIUNET / TFG UPV",
         year: 2021,
         description:
-          "Exploración del espacio de diseño de flags de GCC para balancear tamaño, tiempo de ejecución, CPU, memoria y robustez del binario.",
+          "Exploracion del espacio de diseno de flags de GCC para balancear tamano, tiempo de ejecucion, CPU, memoria y robustez del binario.",
         tags: ["gcc", "optimization", "binary-robustness"],
         link: "https://riunet.upv.es/entities/publication/4e6a5709-ca0e-4c5e-8f04-2386af404e0e"
       }
