@@ -7,8 +7,7 @@ export const profile = {
   emailDomain: "proton.me",
   github: "https://github.com/sbenlloch",
   linkedin: "https://www.linkedin.com/in/sergio-benlloch/",
-  avatar:
-    "https://media.licdn.com/dms/image/v2/D4E03AQHFSiYJeFw8Sw/profile-displayphoto-scale_400_400/B4EZxYzoJpIsAg-/0/1771016456850?e=1779926400&v=beta&t=XIzarrT3DpXNKY-C1ymJRc0GbtA_R3Mg_5h__TykpK0",
+  avatar: "/profile-avatar.jpg",
   company: "ITI - Instituto Tecnológico de Informática",
   githubBio: "Computer engineer. Cybersecurity. Python, Go, C, Rust and Bash.",
   githubStats: {

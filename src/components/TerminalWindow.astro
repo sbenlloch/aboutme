@@ -1,6 +1,4 @@
 ---
-import { terminalCommands } from "@data/terminal";
-
 interface Props {
   title?: string;
 }
@@ -10,10 +8,15 @@ const { title = "session.log" } = Astro.props;
 
 <section class="terminal-window terminal-interactive" data-terminal-window>
   <div class="terminal-bar" data-terminal-handle>
-    <span class="dot"></span>
-    <span class="dot"></span>
-    <span class="dot"></span>
     <span class="terminal-title">{title}</span>
+    <div class="terminal-actions">
+      <button class="terminal-action terminal-action-help" type="button" data-terminal-action="help" aria-label="Show command help">?</button>
+      <div class="terminal-window-controls" aria-label="Window controls">
+        <button class="terminal-action terminal-action-minimize" type="button" data-terminal-action="minimize" aria-label="Minimize terminal">&#8722;</button>
+        <button class="terminal-action terminal-action-maximize" type="button" data-terminal-action="maximize" aria-label="Toggle terminal maximize">&#9633;</button>
+        <button class="terminal-action terminal-action-close" type="button" data-terminal-action="close" aria-label="Reset terminal">&#215;</button>
+      </div>
+    </div>
   </div>
   <div class="terminal-body">
     <div class="terminal-scrollback">
@@ -23,7 +26,7 @@ const { title = "session.log" } = Astro.props;
       <div class="terminal-output-log" data-terminal-log aria-live="polite"></div>
       <form class="terminal-command-form" data-terminal-form>
         <label class="sr-only" for="terminal-command">Terminal command</label>
-        <span class="term-user" aria-hidden="true">sergio@secbox</span><span class="term-path" aria-hidden="true">:~$</span>
+        <span class="term-user" aria-hidden="true">sergio@secbox</span><span class="term-path" aria-hidden="true" data-terminal-prompt>:~$</span>
         <input
           id="terminal-command"
           name="command"
@@ -39,11 +42,39 @@ const { title = "session.log" } = Astro.props;
       </form>
     </div>
   </div>
+  <button class="terminal-resize" type="button" data-terminal-resize aria-label="Resize terminal"></button>
 </section>
 
-<script is:inline define:vars={{ commandResponses: terminalCommands }}>
+<script is:inline>
   const escapeHtml = (value) =>
-    value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+    String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+
+  const wrapLine = (value, width = 92) => {
+    const source = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!source) return [""];
+    const words = source.split(" ");
+    const lines = [];
+    let line = "";
+
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (candidate.length <= width) {
+        line = candidate;
+        continue;
+      }
+      if (line) lines.push(line);
+      if (word.length <= width) {
+        line = word;
+        continue;
+      }
+      const chunks = word.match(new RegExp(`.{1,${width}}`, "g")) ?? [word];
+      lines.push(...chunks.slice(0, -1));
+      line = chunks.at(-1) ?? "";
+    }
+
+    if (line) lines.push(line);
+    return lines;
+  };
 
   const formatDuration = (milliseconds) => {
     const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -59,6 +90,34 @@ const { title = "session.log" } = Astro.props;
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
   };
 
+  const tokenize = (input) => {
+    const matches = input.match(/"(?:\\.|[^"])*"|'(?:\\.|[^'])*'|\S+/g) ?? [];
+    return matches.map((token) => {
+      if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
+        return token.slice(1, -1).replace(/\\(["'\\])/g, "$1");
+      }
+      return token;
+    });
+  };
+
+  const normalizeFsPath = (input, currentDir = "/") => {
+    const raw = (input || "~").trim();
+    const replaced = raw === "~" || raw.startsWith("~/") ? raw.replace(/^~/, "/") : raw;
+    const seed = replaced.startsWith("/") ? replaced : `${currentDir.replace(/\/$/, "")}/${replaced}`;
+    const parts = [];
+
+    for (const segment of seed.split("/")) {
+      if (!segment || segment === ".") continue;
+      if (segment === "..") {
+        parts.pop();
+        continue;
+      }
+      parts.push(segment);
+    }
+
+    return `/${parts.join("/")}`.replace(/\/+/g, "/") || "/";
+  };
+
   document.querySelectorAll("[data-terminal-window]").forEach((terminal) => {
     if (terminal.dataset.ready === "true") return;
     terminal.dataset.ready = "true";
@@ -69,36 +128,137 @@ const { title = "session.log" } = Astro.props;
     const log = terminal.querySelector("[data-terminal-log]");
     const handle = terminal.querySelector("[data-terminal-handle]");
     const body = terminal.querySelector(".terminal-body");
+    const prompt = terminal.querySelector("[data-terminal-prompt]");
+    const actionButtons = terminal.querySelectorAll("[data-terminal-action]");
     const desktopQuery = window.matchMedia("(min-width: 901px)");
     const startedAt = new Date();
-    const commandHistory = ["whoami", "ls -la", "cat contact.txt", "papers", "projects"];
-    let heightLocked = false;
+    const commandHistory = ["help", "ls", "cd projects", "cat home.txt", "links"];
+    const locale = (() => {
+      const candidate = location.pathname.split("/").filter(Boolean)[0];
+      return candidate === "es" ? "es" : "en";
+    })();
+    const homeRoute = `/${locale}`;
+    const baseRoutes = {
+      home: homeRoute,
+      projects: `${homeRoute}/projects`,
+      blog: `${homeRoute}/blog`,
+      contact: `${homeRoute}/contact`
+    };
+    const knownCommands = [
+      "help",
+      "man",
+      "pwd",
+      "ls",
+      "tree",
+      "cd",
+      "cat",
+      "less",
+      "head",
+      "tail",
+      "wc",
+      "stat",
+      "open",
+      "browse",
+      "links",
+      "inspect",
+      "route",
+      "whereami",
+      "grep",
+      "search",
+      "find",
+      "whoami",
+      "skills",
+      "papers",
+      "experience",
+      "contact",
+      "github",
+      "linkedin",
+      "date",
+      "time",
+      "now",
+      "timezone",
+      "tz",
+      "uptime",
+      "history",
+      "echo",
+      "hash",
+      "sha256",
+      "uuid",
+      "theme",
+      "locale",
+      "lang",
+      "viewport",
+      "printenv",
+      "reload",
+      "maximize",
+      "fullscreen",
+      "restore",
+      "resize",
+      "clear",
+      "home",
+      "blog",
+      "projects",
+      "id",
+      "uname"
+    ];
+    const manuals = {
+      help: "help [command]      list commands or explain one command",
+      man: "man <command>       show a longer command description",
+      pwd: "pwd                 print the current virtual directory",
+      ls: "ls [-la] [path]      list files from the portfolio filesystem",
+      tree: "tree [path]         print the web tree in terminal form",
+      cd: "cd <path>           move through /, /projects and /blog",
+      cat: "cat <file>          print page content as plain text",
+      less: "less <file>         alias for cat",
+      head: "head [-n N] <file>  print first N lines",
+      tail: "tail [-n N] <file>  print last N lines",
+      wc: "wc <file>           count lines, words and chars",
+      stat: "stat <path>         inspect a virtual file or directory",
+      open: "open <path|url>     open the real page in the browser",
+      links: "links [file]        list links extracted from a page",
+      inspect: "inspect [file]      summarize the route, headings and links",
+      route: "route               show the real browser path",
+      grep: "grep <term> [file]   search inside one file or the whole site",
+      search: "search <term>       alias for grep across the site",
+      find: "find <term>         search filenames and routes",
+      maximize: "maximize           make the terminal fullscreen",
+      resize: "resize <w> <h>     set terminal size in pixels",
+      restore: "restore            undo maximize and custom size",
+      reload: "reload             reload the current page",
+      clear: "clear              clear scrollback",
+      whoami: "whoami             quick profile summary",
+      skills: "skills             list security and engineering capabilities",
+      papers: "papers             list selected research outputs",
+      experience: "experience         show current and previous roles",
+      contact: "contact            show contact channels",
+      home: "home                print the homepage snapshot",
+      blog: "blog                list blog files",
+      projects: "projects            list project files",
+      id: "id                  show the shell identity",
+      uname: "uname [-a]         show the simulated platform"
+    };
+    let currentDir = "/";
+    let historyIndex = commandHistory.length;
     let followBottom = true;
+    let drag = null;
+    let resizeState = null;
+    const routeCache = new Map();
+    const collectionCache = new Map();
+
+    const promptPath = () => (currentDir === "/" ? "~" : `~${currentDir}`);
+    const updatePrompt = () => {
+      if (prompt) prompt.textContent = `:${promptPath()}$`;
+    };
+    updatePrompt();
 
     const updateFollowBottom = () => {
-      const threshold = 24;
-      followBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - threshold;
+      if (!body) return;
+      followBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 24;
     };
 
     body?.addEventListener("scroll", updateFollowBottom, { passive: true });
     body?.addEventListener("click", () => input?.focus());
     updateFollowBottom();
-
-    const lockInitialHeight = () => {
-      if (heightLocked) return;
-      terminal.dataset.staticHeight = "false";
-      terminal.style.removeProperty("--terminal-static-height");
-      const height = Math.ceil(terminal.getBoundingClientRect().height);
-      terminal.style.setProperty("--terminal-static-height", `${height}px`);
-      terminal.dataset.staticHeight = "true";
-      heightLocked = true;
-    };
-
-    const relockEmptyTerminal = () => {
-      if (log.children.length > 0) return;
-      heightLocked = false;
-      requestAnimationFrame(lockInitialHeight);
-    };
 
     const scrollToBottom = () => {
       if (!body) return;
@@ -106,74 +266,607 @@ const { title = "session.log" } = Astro.props;
       updateFollowBottom();
     };
 
-    const appendOutput = (command, lines) => {
-      const output = document.createElement("div");
-      output.className = "terminal-entry";
-      output.innerHTML = `<p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> ${escapeHtml(command)}</p>${lines
-        .map((line) => `<p class="term-output">${escapeHtml(line)}</p>`)
-        .join("")}`;
-      log.append(output);
-      if (followBottom) {
-        requestAnimationFrame(() => {
-          body.scrollTop = body.scrollHeight;
-          updateFollowBottom();
-        });
+    const setTerminalSize = (width, height) => {
+      terminal.dataset.customSize = "true";
+      terminal.style.width = `${Math.round(width)}px`;
+      terminal.style.height = `${Math.round(height)}px`;
+    };
+
+    const restoreTerminal = () => {
+      terminal.hidden = false;
+      terminal.style.display = "";
+      terminal.dataset.maximized = "false";
+      terminal.dataset.minimized = "false";
+      terminal.dataset.closed = "false";
+      terminal.dataset.customSize = "false";
+      ["width", "height", "left", "top", "position", "right", "z-index", "cursor"].forEach((prop) => terminal.style.removeProperty(prop));
+      resizeState = null;
+      drag = null;
+      if (body) body.scrollTop = 0;
+    };
+
+    const setMinimized = (force) => {
+      const next = typeof force === "boolean" ? force : terminal.dataset.minimized !== "true";
+      terminal.dataset.minimized = next ? "true" : "false";
+      if (next) {
+        terminal.dataset.closed = "false";
+        terminal.dataset.maximized = "false";
       }
     };
 
-    const dynamicResponse = async (rawCommand, command) => {
-      const [name = ""] = command.split(/\s+/);
-      const argument = rawCommand.slice(name.length).trim();
+    const focusTerminal = () => {
+      restoreTerminal();
+      requestAnimationFrame(() => input?.focus());
+    };
+
+    const closeTerminal = () => {
+      terminal.dataset.closed = "true";
+      terminal.dataset.maximized = "false";
+      terminal.dataset.minimized = "false";
+      ["left", "top", "position", "right", "z-index", "cursor"].forEach((prop) => terminal.style.removeProperty(prop));
+      terminal.style.display = "none";
+      terminal.hidden = true;
+    };
+
+    const maximizeTerminal = (force) => {
+      const next = typeof force === "boolean" ? force : terminal.dataset.maximized !== "true";
+      if (next) {
+        terminal.dataset.closed = "false";
+        terminal.dataset.minimized = "false";
+        terminal.dataset.maximized = "true";
+      } else {
+        terminal.dataset.maximized = "false";
+        if (terminal.dataset.customSize !== "true") {
+          terminal.style.removeProperty("width");
+          terminal.style.removeProperty("height");
+        }
+      }
+      updatePrompt();
+      requestAnimationFrame(scrollToBottom);
+    };
+
+    const cursorForEdges = (edges) => ({
+      n: "ns-resize",
+      s: "ns-resize",
+      e: "ew-resize",
+      w: "ew-resize",
+      ne: "nesw-resize",
+      sw: "nesw-resize",
+      nw: "nwse-resize",
+      se: "nwse-resize"
+    })[edges] || "";
+
+    const getResizeEdges = (event) => {
+      if (!desktopQuery.matches || terminal.dataset.maximized === "true") return "";
+      const rect = terminal.getBoundingClientRect();
+      const margin = 8;
+      const nearTop = event.clientY - rect.top <= margin;
+      const nearBottom = rect.bottom - event.clientY <= margin;
+      const nearLeft = event.clientX - rect.left <= margin;
+      const nearRight = rect.right - event.clientX <= margin;
+      let edges = "";
+      if (nearTop) edges += "n";
+      else if (nearBottom) edges += "s";
+      if (nearLeft) edges += "w";
+      else if (nearRight) edges += "e";
+      return edges;
+    };
+
+    const beginResize = (event, edges) => {
+      maximizeTerminal(false);
+      const rect = terminal.getBoundingClientRect();
+      terminal.style.position = "fixed";
+      terminal.style.width = `${rect.width}px`;
+      terminal.style.height = `${rect.height}px`;
+      terminal.style.left = `${rect.left}px`;
+      terminal.style.top = `${rect.top}px`;
+      terminal.style.right = "auto";
+      terminal.style.zIndex = "30";
+      resizeState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+        edges
+      };
+      terminal.setPointerCapture(event.pointerId);
+      terminal.style.cursor = cursorForEdges(edges);
+    };
+
+    const appendOutput = (command, lines) => {
+      const output = document.createElement("div");
+      output.className = "terminal-entry";
+      output.innerHTML = `<p><span class="term-user">sergio@secbox</span><span class="term-path">:${escapeHtml(promptPath())}$</span> ${escapeHtml(command)}</p>${lines
+        .map((line) => `<p class="term-output">${escapeHtml(line)}</p>`)
+        .join("")}`;
+      log.append(output);
+      if (followBottom) requestAnimationFrame(scrollToBottom);
+    };
+
+    const normalizeRoute = (value) => {
+      try {
+        const url = new URL(value, window.location.origin);
+        if (url.origin !== window.location.origin) return null;
+        return url.pathname.replace(/\/$/, "") || "/";
+      } catch {
+        return null;
+      }
+    };
+
+    const sanitizePathname = (pathname) => pathname.replace(/\/$/, "") || "/";
+
+    const routeToFsPath = (route) => {
+      const normalized = sanitizePathname(route);
+      if (normalized === baseRoutes.home) return "/home.txt";
+      if (normalized === baseRoutes.contact) return "/contact.txt";
+      if (normalized === baseRoutes.projects) return "/projects/index.txt";
+      if (normalized === baseRoutes.blog) return "/blog/index.txt";
+      if (normalized.startsWith(`${baseRoutes.projects}/`)) return `/projects/${normalized.slice(baseRoutes.projects.length + 1)}.txt`;
+      if (normalized.startsWith(`${baseRoutes.blog}/`)) return `/blog/${normalized.slice(baseRoutes.blog.length + 1)}.txt`;
+      return null;
+    };
+
+    const getRouteForFsPath = (path) => {
+      if (path === "/home.txt") return baseRoutes.home;
+      if (path === "/contact.txt") return baseRoutes.contact;
+      if (path === "/projects/index.txt" || path === "/projects") return baseRoutes.projects;
+      if (path === "/blog/index.txt" || path === "/blog") return baseRoutes.blog;
+      if (/^\/projects\/[^/]+\.txt$/.test(path)) return `${baseRoutes.projects}/${path.split("/").at(-1).replace(/\.txt$/, "")}`;
+      if (/^\/blog\/[^/]+\.txt$/.test(path)) return `${baseRoutes.blog}/${path.split("/").at(-1).replace(/\.txt$/, "")}`;
+      return null;
+    };
+
+    const extractRouteData = (route, doc) => {
+      const container = doc.querySelector("main") || doc.querySelector("article") || doc.body;
+      const working = container.cloneNode(true);
+      working.querySelectorAll("script,style,noscript,svg").forEach((node) => node.remove());
+      const blocks = Array.from(working.querySelectorAll("h1,h2,h3,p,li,blockquote,pre")).map((node) => node.textContent?.replace(/\s+/g, " ").trim() || "").filter(Boolean);
+      const description = doc.querySelector('meta[name="description"]')?.getAttribute("content")?.trim() || "";
+      const title = doc.title?.trim() || route;
+      const heading = doc.querySelector("h1")?.textContent?.trim() || title;
+      const links = Array.from((doc.querySelector("main") || doc).querySelectorAll("a[href]"))
+        .map((link) => {
+          const href = link.getAttribute("href");
+          if (!href) return null;
+          try {
+            const url = new URL(href, window.location.origin);
+            return {
+              href: url.origin === window.location.origin ? sanitizePathname(url.pathname) : url.href,
+              label: link.textContent?.replace(/\s+/g, " ").trim() || url.pathname
+            };
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      return {
+        route,
+        title,
+        heading,
+        description,
+        blocks,
+        links,
+        headings: Array.from(working.querySelectorAll("h1,h2,h3")).map((node) => node.textContent?.trim() || "").filter(Boolean)
+      };
+    };
+
+    const getCurrentDocumentData = () => extractRouteData(sanitizePathname(window.location.pathname), document);
+
+    const loadRoute = async (route) => {
+      const normalized = sanitizePathname(route);
+      if (routeCache.has(normalized)) return routeCache.get(normalized);
+      if (normalized === sanitizePathname(window.location.pathname)) {
+        const data = getCurrentDocumentData();
+        routeCache.set(normalized, data);
+        return data;
+      }
+      const response = await fetch(normalized);
+      if (!response.ok) throw new Error(`unable to fetch ${normalized}`);
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const data = extractRouteData(normalized, doc);
+      routeCache.set(normalized, data);
+      return data;
+    };
+
+    const getRootEntries = () => [
+      { name: "home.txt", type: "file", route: baseRoutes.home, description: "homepage snapshot" },
+      { name: "projects", type: "dir", route: baseRoutes.projects, description: "project pages" },
+      { name: "blog", type: "dir", route: baseRoutes.blog, description: "blog posts" },
+      { name: "contact.txt", type: "file", route: baseRoutes.contact, description: "contact page" },
+      { name: "current.txt", type: "file", route: sanitizePathname(window.location.pathname), description: "current route snapshot" },
+      { name: "sitemap.txt", type: "file", description: "known route map" },
+      { name: "env.txt", type: "file", description: "browser environment" }
+    ];
+
+    const loadCollectionEntries = async (section) => {
+      if (collectionCache.has(section)) return collectionCache.get(section);
+      const indexRoute = baseRoutes[section];
+      const data = await loadRoute(indexRoute);
+      const prefix = `${indexRoute}/`;
+      const seen = new Map();
+      for (const link of data.links) {
+        if (!link.href.startsWith(prefix)) continue;
+        const slug = link.href.slice(prefix.length);
+        if (!slug || slug.includes("/")) continue;
+        if (!seen.has(slug)) {
+          seen.set(slug, {
+            name: `${slug}.txt`,
+            type: "file",
+            route: link.href,
+            description: link.label
+          });
+        }
+      }
+      const entries = [{ name: "index.txt", type: "file", route: indexRoute, description: `${section} index` }, ...Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name))];
+      collectionCache.set(section, entries);
+      return entries;
+    };
+
+    const listDirectory = async (target) => {
+      if (target === "/") return getRootEntries();
+      if (target === "/projects") return loadCollectionEntries("projects");
+      if (target === "/blog") return loadCollectionEntries("blog");
+      throw new Error(`not a directory: ${target}`);
+    };
+
+    const getFileLines = async (target) => {
+      if (target === "/sitemap.txt") {
+        const projectEntries = await loadCollectionEntries("projects");
+        const blogEntries = await loadCollectionEntries("blog");
+        const lines = ["portfolio map", "", `${baseRoutes.home} -> /home.txt`, `${baseRoutes.contact} -> /contact.txt`, `${baseRoutes.projects} -> /projects/index.txt`];
+        for (const entry of projectEntries.slice(1)) lines.push(`${entry.route} -> /projects/${entry.name}`);
+        lines.push(`${baseRoutes.blog} -> /blog/index.txt`);
+        for (const entry of blogEntries.slice(1)) lines.push(`${entry.route} -> /blog/${entry.name}`);
+        return lines;
+      }
+
+      if (target === "/env.txt") {
+        return [
+          `lang=${document.documentElement.lang || locale}`,
+          `path=${sanitizePathname(window.location.pathname)}`,
+          `theme=${document.documentElement.dataset.theme === "dark" ? "dark" : "light"}`,
+          `viewport=${window.innerWidth}x${window.innerHeight}`,
+          `dpr=${window.devicePixelRatio || 1}`,
+          `ua=${navigator.userAgent}`
+        ];
+      }
+
+      const route = target === "/current.txt" ? sanitizePathname(window.location.pathname) : getRouteForFsPath(target);
+      if (!route) throw new Error(`not a file: ${target}`);
+      const data = await loadRoute(route);
+      const lines = [
+        `# ${data.heading}`,
+        `route: ${data.route}`,
+        `title: ${data.title}`,
+        data.description ? `description: ${data.description}` : null,
+        ""
+      ].filter(Boolean);
+      for (const block of data.blocks) lines.push(...wrapLine(block));
+      if (data.links.length) {
+        lines.push("", "links:");
+        data.links.slice(0, 12).forEach((link, index) => lines.push(`${String(index + 1).padStart(2, "0")}. ${link.label} -> ${link.href}`));
+      }
+      return lines;
+    };
+
+    const describePath = async (target) => {
+      if (["/", "/projects", "/blog"].includes(target)) {
+        const entries = await listDirectory(target);
+        return {
+          type: "directory",
+          name: target === "/" ? "/" : target.split("/").at(-1),
+          entries,
+          lines: [
+            `type: directory`,
+            `path: ${target}`,
+            `entries: ${entries.length}`,
+            `route: ${getRouteForFsPath(target) || "virtual"}`
+          ]
+        };
+      }
+
+      const lines = await getFileLines(target);
+      return {
+        type: "file",
+        name: target.split("/").at(-1),
+        lines: [`type: file`, `path: ${target}`, `lines: ${lines.length}`, `route: ${target === "/current.txt" ? sanitizePathname(window.location.pathname) : getRouteForFsPath(target) || "virtual"}`]
+      };
+    };
+
+    const formatLs = (entries, detailed = false) => {
+      if (!detailed) return [entries.map((entry) => (entry.type === "dir" ? `${entry.name}/` : entry.name)).join("  ")];
+      return entries.map((entry) => {
+        const perms = entry.type === "dir" ? "dr-xr-xr-x" : "-r--r--r--";
+        const route = entry.route || "virtual";
+        return `${perms}  portfolio  ${entry.type.padEnd(4, " ")}  ${String(route.length).padStart(3, " ")}  ${entry.type === "dir" ? `${entry.name}/` : entry.name}`;
+      });
+    };
+
+    const getAutocompleteOptions = async () => {
+      const entries = await listDirectory(currentDir).catch(() => []);
+      return [...knownCommands, ...entries.map((entry) => (entry.type === "dir" ? `${entry.name}/` : entry.name))];
+    };
+
+    const commonPrefix = (values) => {
+      if (!values.length) return "";
+      let prefix = values[0];
+      for (const value of values.slice(1)) {
+        while (prefix && !value.startsWith(prefix)) prefix = prefix.slice(0, -1);
+      }
+      return prefix;
+    };
+
+    const completeCommandToken = (fragment) => {
+      const matches = knownCommands.filter((option) => option.startsWith(fragment));
+      if (!matches.length) return null;
+      if (matches.length === 1) return { nextValue: `${matches[0]} `, matches: [] };
+      const prefix = commonPrefix(matches);
+      if (prefix.length > fragment.length) return { nextValue: prefix, matches: [] };
+      return { nextValue: fragment, matches };
+    };
+
+    const completePathToken = async (fragment) => {
+      const slashIndex = fragment.lastIndexOf("/");
+      const baseToken = slashIndex >= 0 ? fragment.slice(0, slashIndex + 1) : "";
+      const directoryPath = normalizeFsPath(baseToken || currentDir, currentDir);
+      const entries = await listDirectory(directoryPath).catch(() => []);
+      const candidates = entries.map((entry) => ({
+        value: `${baseToken}${entry.type === "dir" ? `${entry.name}/` : entry.name}`,
+        label: entry.type === "dir" ? `${entry.name}/` : entry.name
+      }));
+      const matches = candidates.filter((candidate) => candidate.value.startsWith(fragment));
+      if (!matches.length) return null;
+      if (matches.length === 1) {
+        const nextValue = matches[0].value.endsWith("/") ? matches[0].value : `${matches[0].value} `;
+        return { nextValue, matches: [] };
+      }
+      const prefix = commonPrefix(matches.map((candidate) => candidate.value));
+      if (prefix.length > fragment.length) return { nextValue: prefix, matches: [] };
+      return { nextValue: fragment, matches: matches.map((candidate) => candidate.label) };
+    };
+
+    const grepInPath = async (term, target) => {
+      const searchTerm = term.toLowerCase();
+      const targets = target ? [normalizeFsPath(target, currentDir)] : ["/home.txt", "/contact.txt", "/current.txt", "/projects/index.txt", "/blog/index.txt"];
+      if (!target) {
+        const projectEntries = await loadCollectionEntries("projects");
+        const blogEntries = await loadCollectionEntries("blog");
+        targets.push(...projectEntries.slice(1).map((entry) => `/projects/${entry.name}`), ...blogEntries.slice(1).map((entry) => `/blog/${entry.name}`));
+      }
+      const hits = [];
+      for (const path of targets) {
+        const lines = await getFileLines(path).catch(() => null);
+        if (!lines) continue;
+        lines.forEach((line, index) => {
+          if (line.toLowerCase().includes(searchTerm)) hits.push(`${path}:${index + 1}: ${line}`);
+        });
+      }
+      return hits.length ? hits.slice(0, 32) : [`no matches for: ${term}`];
+    };
+
+    const handleDynamicCommand = async (rawCommand) => {
+      const tokens = tokenize(rawCommand);
+      const [name = ""] = tokens;
+      const command = name.toLowerCase();
+      const args = tokens.slice(1);
       const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 
-      if (command === "date") {
-        return [new Date().toDateString()];
+      if (command === "help") {
+        if (args[0]) return manuals[args[0]] ? [manuals[args[0]]] : [`unknown command: ${args[0]}`];
+        return [
+          "interactive portfolio shell",
+          "",
+          "filesystem: pwd, ls, tree, cd, cat, less, head, tail, wc, stat",
+          "navigation: open, links, inspect, route, grep, search, find",
+          "profile: whoami, skills, papers, experience, contact, github, linkedin",
+          "runtime: date, time, timezone, uptime, history, echo, hash, uuid, theme, locale, viewport, printenv",
+          "window: maximize, fullscreen, restore, resize 1200 760, reload, clear",
+          "hint: use tab autocomplete and arrow history"
+        ];
       }
 
-      if (command === "time" || command === "now") {
-        return [new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "medium", timeZoneName: "short" }).format(new Date())];
+      if (command === "man") {
+        if (!args[0]) return ["usage: man <command>"];
+        return manuals[args[0]] ? [manuals[args[0]], "", "this shell reads the real site, not canned text."] : [`unknown command: ${args[0]}`];
       }
 
-      if (command === "timezone" || command === "tz") {
-        return [Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"];
+      if (command === "pwd") return [currentDir];
+
+      if (command === "ls") {
+        const detailed = args.includes("-la") || args.includes("-l") || args.includes("-al");
+        const target = normalizeFsPath(args.find((arg) => !arg.startsWith("-")) || currentDir, currentDir);
+        const entries = await listDirectory(target);
+        return formatLs(entries, detailed);
       }
 
-      if (command === "uptime") {
-        return [`terminal session: ${formatDuration(Date.now() - startedAt.getTime())}`];
+      if (command === "tree") {
+        const target = normalizeFsPath(args[0] || currentDir, currentDir);
+        const entries = await listDirectory(target);
+        const lines = [target === "/" ? "." : target.split("/").at(-1)];
+        for (const entry of entries) lines.push(`${entry.type === "dir" ? "|-" : "|-"} ${entry.type === "dir" ? `${entry.name}/` : entry.name}`);
+        return lines;
       }
 
-      if (command === "history") {
-        return commandHistory.map((item, index) => `${index + 1}  ${item}`);
+      if (command === "cd") {
+        const next = normalizeFsPath(args[0] || "/", currentDir);
+        await listDirectory(next);
+        currentDir = next;
+        updatePrompt();
+        return [currentDir];
       }
 
-      if (name === "echo") {
-        return [argument];
+      if (["cat", "less"].includes(command)) {
+        if (!args[0]) return [`usage: ${command} <file>`];
+        return getFileLines(normalizeFsPath(args[0], currentDir));
       }
 
-      if (name === "hash" || name === "sha256") {
+      if (["head", "tail"].includes(command)) {
+        const countIndex = args.findIndex((arg) => arg === "-n");
+        const count = countIndex >= 0 ? Number.parseInt(args[countIndex + 1] || "10", 10) : 10;
+        const pathArg = args.filter((_arg, index) => index !== countIndex && index !== countIndex + 1).at(-1);
+        if (!pathArg) return [`usage: ${command} [-n N] <file>`];
+        const lines = await getFileLines(normalizeFsPath(pathArg, currentDir));
+        return command === "head" ? lines.slice(0, count) : lines.slice(-count);
+      }
+
+      if (command === "wc") {
+        if (!args[0]) return ["usage: wc <file>"];
+        const target = normalizeFsPath(args[0], currentDir);
+        const lines = await getFileLines(target);
+        const text = lines.join("\n");
+        return [`${lines.length} ${text.split(/\s+/).filter(Boolean).length} ${text.length} ${target}`];
+      }
+
+      if (command === "stat") {
+        if (!args[0]) return ["usage: stat <path>"];
+        const info = await describePath(normalizeFsPath(args[0], currentDir));
+        return info.lines;
+      }
+
+      if (command === "open" || command === "browse") {
+        const target = args[0];
+        if (!target) return ["usage: open <path|url>"];
+        let href = target;
+        if (/^https?:\/\//i.test(target)) {
+          window.open(target, "_blank", "noopener");
+          return [`opening external url: ${target}`];
+        }
+        const fsTarget = normalizeFsPath(target, currentDir);
+        href = getRouteForFsPath(fsTarget) || normalizeRoute(target) || normalizeRoute(`${homeRoute}/${target.replace(/^\//, "")}`);
+        if (!href) return [`cannot resolve target: ${target}`];
+        setTimeout(() => {
+          window.location.href = href;
+        }, 120);
+        return [`opening ${href}`];
+      }
+
+      if (command === "links") {
+        const target = args[0] ? normalizeFsPath(args[0], currentDir) : "/current.txt";
+        const route = target === "/current.txt" ? sanitizePathname(window.location.pathname) : getRouteForFsPath(target);
+        if (!route) return [`not a page-backed file: ${target}`];
+        const data = await loadRoute(route);
+        return data.links.length ? data.links.map((link, index) => `${String(index + 1).padStart(2, "0")}. ${link.label} -> ${link.href}`) : ["no links found"];
+      }
+
+      if (command === "inspect") {
+        const target = args[0] ? normalizeFsPath(args[0], currentDir) : "/current.txt";
+        const route = target === "/current.txt" ? sanitizePathname(window.location.pathname) : getRouteForFsPath(target);
+        if (!route) return [`not a page-backed file: ${target}`];
+        const data = await loadRoute(route);
+        return [
+          `route: ${data.route}`,
+          `title: ${data.title}`,
+          `heading: ${data.heading}`,
+          `blocks: ${data.blocks.length}`,
+          `headings: ${data.headings.length}`,
+          `links: ${data.links.length}`
+        ];
+      }
+
+      if (command === "route" || command === "whereami") return [sanitizePathname(window.location.pathname), `virtual=${routeToFsPath(sanitizePathname(window.location.pathname)) || "unmapped"}`];
+
+      if (command === "grep" || command === "search") {
+        if (!args[0]) return [`usage: ${command} <term> [file]`];
+        return grepInPath(args[0], args[1]);
+      }
+
+      if (command === "find") {
+        if (!args[0]) return ["usage: find <term>"];
+        const term = args[0].toLowerCase();
+        const projectEntries = await loadCollectionEntries("projects");
+        const blogEntries = await loadCollectionEntries("blog");
+        const searchable = [
+          ...getRootEntries().map((entry) => ({ path: `/${entry.name}`.replace("//", "/"), label: entry.description || entry.name })),
+          ...projectEntries.map((entry) => ({ path: `/projects/${entry.name}`, label: entry.description || entry.name })),
+          ...blogEntries.map((entry) => ({ path: `/blog/${entry.name}`, label: entry.description || entry.name }))
+        ];
+        const hits = searchable.filter((entry) => `${entry.path} ${entry.label}`.toLowerCase().includes(term));
+        return hits.length ? hits.map((entry) => `${entry.path} -> ${entry.label}`) : [`no path matches for: ${args[0]}`];
+      }
+
+      if (command === "home") return getFileLines("/home.txt");
+      if (command === "blog") return formatLs(await loadCollectionEntries("blog"));
+      if (command === "projects") return formatLs(await loadCollectionEntries("projects"));
+      if (command === "id") return ["uid=1000(security-researcher) groups=pentest,reversing,crypto,web-shell"];
+      if (command === "uname") return [args[0] === "-a" ? "Linux secbox 6.x x86_64 GNU/Linux browser-shell" : "Linux secbox 6.x"];
+
+      if (command === "whoami") {
+        return [
+          "Sergio Benlloch",
+          "R&D Security Engineer focused on practical security assessment, reversing, cryptography, AI security and PETs.",
+          "tip: cat home.txt, ls /projects, grep security /blog/index.txt"
+        ];
+      }
+
+      if (command === "skills") {
+        return [
+          "manual assessments, code audits, threat modeling",
+          "firmware and ARM/x86 reversing",
+          "applied cryptography, protocol review, PQC",
+          "AI security reviews and secure ML pipelines",
+          "Python, Go, C, Java, Bash, Linux"
+        ];
+      }
+
+      if (command === "papers") {
+        return [
+          "2025  Threat Modeling for Enhancing Security of IoT Audio Classification Devices",
+          "2023  Inteligencia de archivos binarios",
+          "2021  Exploración del espacio de diseño multiobjetivo para ficheros binarios"
+        ];
+      }
+
+      if (command === "experience") {
+        return [
+          "2023-present  Security Researcher at ITI - Instituto Tecnológico de Informática",
+          "2021-2023    Offensive Security Researcher at Cyber Intelligence S.L."
+        ];
+      }
+
+      if (command === "contact") return ["email: sergibenlloch@proton.me", "github: github.com/sbenlloch", "linkedin: linkedin.com/in/sergio-benlloch"];
+      if (command === "github") return ["https://github.com/sbenlloch"];
+      if (command === "linkedin") return ["https://www.linkedin.com/in/sergio-benlloch/"];
+      if (command === "date") return [new Date().toDateString()];
+      if (command === "time" || command === "now") return [new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "medium", timeZoneName: "short" }).format(new Date())];
+      if (command === "timezone" || command === "tz") return [Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown"];
+      if (command === "uptime") return [`terminal session: ${formatDuration(Date.now() - startedAt.getTime())}`];
+      if (command === "history") return commandHistory.map((item, index) => `${index + 1}  ${item}`);
+      if (command === "echo") return [args.join(" ")];
+      if (command === "hash" || command === "sha256") {
+        const argument = rawCommand.slice(name.length).trim();
         if (!argument) return ["usage: hash <text>"];
         if (argument.length > 256) return ["input too long: max 256 characters"];
         return [`sha256=${await sha256(argument)}`];
       }
-
-      if (command === "uuid") {
-        return [crypto.randomUUID ? crypto.randomUUID() : "crypto.randomUUID is not available"];
+      if (command === "uuid") return [crypto.randomUUID ? crypto.randomUUID() : "crypto.randomUUID is not available"];
+      if (command === "theme") return [`theme=${currentTheme}`];
+      if (command === "locale" || command === "lang") return [`locale=${document.documentElement.lang || locale}`];
+      if (command === "viewport") return [`${window.innerWidth}x${window.innerHeight} dpr=${window.devicePixelRatio || 1}`];
+      if (command === "printenv") return [`LANG=${document.documentElement.lang || locale}`, "SHELL=/bin/browser", "TERM=xterm-portfolio", `PWD=${currentDir}`, `THEME=${currentTheme}`];
+      if (command === "reload") {
+        setTimeout(() => window.location.reload(), 120);
+        return ["reloading page"];
       }
-
-      if (command === "theme") {
-        return [`theme=${currentTheme}`];
+      if (command === "maximize" || command === "fullscreen") {
+        maximizeTerminal(true);
+        return ["terminal maximized"];
       }
-
-      if (command === "locale" || command === "lang") {
-        return [`locale=${document.documentElement.lang || "unknown"}`];
+      if (command === "restore") {
+        restoreTerminal();
+        return ["terminal restored"];
       }
-
-      if (command === "viewport") {
-        return [`${window.innerWidth}x${window.innerHeight} dpr=${window.devicePixelRatio || 1}`];
-      }
-
-      if (command === "printenv") {
-        return [`LANG=${document.documentElement.lang || "en"}`, "SHELL=/bin/browser", `TERM=xterm-portfolio`, `THEME=${currentTheme}`];
+      if (command === "resize") {
+        const width = Number.parseInt(args[0] || "0", 10);
+        const height = Number.parseInt(args[1] || "0", 10);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width < 520 || height < 320) return ["usage: resize <width>=520+ <height>=320+"];
+        maximizeTerminal(false);
+        setTerminalSize(Math.min(width, window.innerWidth - 24), Math.min(height, window.innerHeight - 24));
+        return [`terminal resized to ${terminal.style.width} x ${terminal.style.height}`];
       }
 
       return null;
@@ -182,57 +875,135 @@ const { title = "session.log" } = Astro.props;
     form?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const rawCommand = input.value.trim();
-      const command = rawCommand.toLowerCase();
-      if (!command) return;
+      if (!rawCommand) return;
       input.value = "";
       commandHistory.push(rawCommand);
+      historyIndex = commandHistory.length;
 
-      if (command === "clear") {
+      if (rawCommand.toLowerCase() === "clear") {
         initial.textContent = "";
         log.textContent = "";
         requestAnimationFrame(scrollToBottom);
         return;
       }
 
-      const dynamicLines = await dynamicResponse(rawCommand, command);
-      appendOutput(rawCommand, dynamicLines ?? commandResponses[command] ?? [`command not found: ${rawCommand}`, "try: help"]);
+      try {
+        const lines = await handleDynamicCommand(rawCommand);
+        appendOutput(rawCommand, lines ?? [`command not found: ${rawCommand}`, "try: help"]);
+        requestAnimationFrame(scrollToBottom);
+      } catch (error) {
+        appendOutput(rawCommand, [error instanceof Error ? error.message : "command failed"]);
+        requestAnimationFrame(scrollToBottom);
+      }
     });
 
-    let drag = null;
-    const resetPosition = () => {
-      if (!desktopQuery.matches) {
-        terminal.style.removeProperty("position");
-        terminal.style.removeProperty("left");
-        terminal.style.removeProperty("top");
-        terminal.style.removeProperty("right");
-        terminal.style.removeProperty("width");
-        terminal.style.removeProperty("z-index");
+    input?.addEventListener("keydown", async (event) => {
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        historyIndex = Math.max(0, historyIndex - 1);
+        input.value = commandHistory[historyIndex] || "";
+        input.setSelectionRange(input.value.length, input.value.length);
+        return;
       }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        historyIndex = Math.min(commandHistory.length, historyIndex + 1);
+        input.value = commandHistory[historyIndex] || "";
+        return;
+      }
+
+      if (event.key === "Tab") {
+        event.preventDefault();
+        const rawValue = input.value;
+        const tokens = tokenize(rawValue);
+        const endsWithSpace = /\s$/.test(rawValue);
+
+        if (!tokens.length) {
+          const options = await getAutocompleteOptions();
+          appendOutput("tab", [options.join("  ")]);
+          return;
+        }
+
+        if (tokens.length === 1 && !endsWithSpace) {
+          const completion = completeCommandToken(tokens[0]);
+          if (completion?.nextValue) input.value = completion.nextValue;
+          if (completion?.matches?.length) appendOutput(tokens[0], [completion.matches.join("  ")]);
+          return;
+        }
+
+        const fragment = endsWithSpace ? "" : tokens.at(-1) || "";
+        const prefix = endsWithSpace ? rawValue : rawValue.slice(0, rawValue.length - fragment.length);
+        const completion = await completePathToken(fragment);
+        if (completion?.nextValue !== undefined) input.value = `${prefix}${completion.nextValue}`;
+        if (completion?.matches?.length) appendOutput(fragment || "tab", [completion.matches.join("  ")]);
+        return;
+      }
+
+      if (event.ctrlKey && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        initial.textContent = "";
+        log.textContent = "";
+      }
+    });
+
+    actionButtons.forEach((button) => {
+      ["pointerdown", "click", "dblclick"].forEach((eventName) => {
+        button.addEventListener(eventName, (event) => {
+          event.stopPropagation();
+        });
+      });
+
+      button.addEventListener("click", () => {
+        const action = button.getAttribute("data-terminal-action");
+        if (action === "help") appendOutput("help", ["tip: ls, cd projects, cat home.txt, open /blog, grep security", "shortcut: Ctrl+` reopens the terminal; Esc closes it"]);
+        if (action === "minimize") setMinimized();
+        if (action === "maximize") maximizeTerminal();
+        if (action === "close") closeTerminal();
+      });
+    });
+
+    const reopenShortcutPressed = (event) => event.ctrlKey && !event.altKey && !event.metaKey && event.key === "`";
+
+    window.addEventListener("keydown", (event) => {
+      if (reopenShortcutPressed(event)) {
+        event.preventDefault();
+        focusTerminal();
+        return;
+      }
+
+      if (event.key === "Escape" && !terminal.hidden) {
+        closeTerminal();
+      }
+    }, true);
+
+    const resetDesktopPosition = () => {
+      if (desktopQuery.matches || terminal.dataset.maximized === "true") return;
+      ["position", "left", "top", "right", "z-index"].forEach((prop) => terminal.style.removeProperty(prop));
     };
 
-    desktopQuery.addEventListener("change", resetPosition);
-    resetPosition();
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        lockInitialHeight();
-        scrollToBottom();
-      })
-    );
-    window.addEventListener("load", relockEmptyTerminal, { once: true });
-    window.addEventListener("resize", relockEmptyTerminal);
+    desktopQuery.addEventListener("change", resetDesktopPosition);
+    resetDesktopPosition();
+
+    handle?.addEventListener("dblclick", (event) => {
+      if (event.target.closest("[data-terminal-action]")) return;
+      maximizeTerminal();
+    });
 
     handle?.addEventListener("pointerdown", (event) => {
-      if (!desktopQuery.matches || event.button !== 0) return;
+      if (event.target.closest("[data-terminal-action]")) return;
+      if (getResizeEdges(event)) return;
+      if (!desktopQuery.matches || terminal.dataset.maximized === "true" || event.button !== 0) return;
       const rect = terminal.getBoundingClientRect();
       drag = {
-        active: false,
         startX: event.clientX,
         startY: event.clientY,
-        originalLeft: rect.left,
-        originalTop: rect.top,
+        width: rect.width,
         offsetX: event.clientX - rect.left,
         offsetY: event.clientY - rect.top,
-        width: rect.width
+        originalLeft: rect.left,
+        originalTop: rect.top,
+        active: false
       };
       handle.setPointerCapture(event.pointerId);
     });
@@ -252,19 +1023,84 @@ const { title = "session.log" } = Astro.props;
       }
       const maxLeft = window.innerWidth - drag.width - 12;
       const maxTop = window.innerHeight - terminal.offsetHeight - 12;
-      const left = Math.min(Math.max(12, event.clientX - drag.offsetX), Math.max(12, maxLeft));
-      const top = Math.min(Math.max(12, event.clientY - drag.offsetY), Math.max(12, maxTop));
-      terminal.style.left = `${left}px`;
-      terminal.style.top = `${top}px`;
+      terminal.style.left = `${Math.min(Math.max(12, event.clientX - drag.offsetX), Math.max(12, maxLeft))}px`;
+      terminal.style.top = `${Math.min(Math.max(12, event.clientY - drag.offsetY), Math.max(12, maxTop))}px`;
     });
 
-    const stopDrag = (event) => {
+    handle?.addEventListener("pointerup", (event) => {
       if (!drag) return;
-      drag = null;
       handle.releasePointerCapture?.(event.pointerId);
-    };
+      drag = null;
+    });
 
-    handle?.addEventListener("pointerup", stopDrag);
-    handle?.addEventListener("pointercancel", stopDrag);
+    terminal.addEventListener("pointermove", (event) => {
+      if (resizeState) {
+        const dx = event.clientX - resizeState.startX;
+        const dy = event.clientY - resizeState.startY;
+        let left = resizeState.left;
+        let top = resizeState.top;
+        let width = resizeState.width;
+        let height = resizeState.height;
+
+        if (resizeState.edges.includes("e")) {
+          width = Math.min(window.innerWidth - resizeState.left - 12, Math.max(520, resizeState.width + dx));
+        }
+
+        if (resizeState.edges.includes("s")) {
+          height = Math.min(window.innerHeight - resizeState.top - 12, Math.max(320, resizeState.height + dy));
+        }
+
+        if (resizeState.edges.includes("w")) {
+          left = Math.min(Math.max(12, resizeState.left + dx), resizeState.left + resizeState.width - 520);
+          width = resizeState.width + (resizeState.left - left);
+        }
+
+        if (resizeState.edges.includes("n")) {
+          top = Math.min(Math.max(12, resizeState.top + dy), resizeState.top + resizeState.height - 320);
+          height = resizeState.height + (resizeState.top - top);
+        }
+
+        terminal.dataset.customSize = "true";
+        terminal.style.left = `${left}px`;
+        terminal.style.top = `${top}px`;
+        terminal.style.width = `${width}px`;
+        terminal.style.height = `${height}px`;
+        requestAnimationFrame(scrollToBottom);
+        return;
+      }
+
+      const edges = getResizeEdges(event);
+      terminal.style.cursor = cursorForEdges(edges);
+    });
+
+    terminal.addEventListener("pointerleave", () => {
+      if (!resizeState) terminal.style.cursor = "";
+    });
+
+    terminal.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target.closest("[data-terminal-action]")) return;
+      const edges = getResizeEdges(event);
+      if (!edges) return;
+      event.preventDefault();
+      event.stopPropagation();
+      beginResize(event, edges);
+    });
+
+    terminal.addEventListener("pointerup", (event) => {
+      if (!resizeState) return;
+      terminal.releasePointerCapture?.(event.pointerId);
+      resizeState = null;
+      terminal.style.cursor = "";
+    });
+
+    terminal.addEventListener("pointercancel", () => {
+      resizeState = null;
+      terminal.style.cursor = "";
+    });
+
+    requestAnimationFrame(() => {
+      updatePrompt();
+      if (body) body.scrollTop = 0;
+    });
   });
 </script>

@@ -263,16 +263,33 @@ h1 {
 }
 
 .terminal-window {
+  position: relative;
   display: flex;
   min-width: 0;
+  min-height: 500px;
+  height: clamp(520px, 68vh, 880px);
   flex-direction: column;
   overflow: hidden;
   font-family: var(--mono);
   animation: rise 520ms ease both;
 }
 
-.terminal-window[data-static-height="true"] {
-  height: var(--terminal-static-height);
+.terminal-window[data-maximized="true"] {
+  position: fixed;
+  inset: 14px;
+  width: auto !important;
+  height: auto !important;
+  z-index: 60;
+}
+
+.terminal-window[data-minimized="true"] {
+  height: auto !important;
+  min-height: 0;
+}
+
+.terminal-window[data-minimized="true"] .terminal-body,
+.terminal-window[data-minimized="true"] .terminal-resize {
+  display: none;
 }
 
 .terminal-bar {
@@ -280,40 +297,85 @@ h1 {
   cursor: grab;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   border-bottom: 1px solid var(--line);
   padding: 10px 13px;
-  background: var(--panel-strong);
+  background: linear-gradient(180deg, var(--panel-strong), color-mix(in srgb, var(--panel-strong) 75%, transparent));
 }
 
 .terminal-bar:active {
   cursor: grabbing;
 }
 
-.dot {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: var(--green);
-}
-
-.dot:nth-child(2) {
-  background: var(--amber);
-}
-
-.dot:nth-child(3) {
-  background: var(--blue);
-}
-
 .terminal-title {
   min-width: 0;
-  margin-left: auto;
   color: var(--muted);
   font-size: 0.78rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.terminal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.terminal-window-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terminal-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, #111);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 78%, #f6f6f2);
+  color: color-mix(in srgb, var(--terminal-ink) 70%, #111);
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.terminal-action:hover {
+  border-color: color-mix(in srgb, var(--green) 35%, #4a4a4a);
+  background: color-mix(in srgb, var(--panel) 56%, #ecece7);
+  color: #1f1f1f;
+}
+
+.terminal-action-help {
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.terminal-action-minimize {
+  font-size: 1.1rem;
+  padding-bottom: 3px;
+}
+
+.terminal-action-maximize {
+  font-size: 0.9rem;
+}
+
+.terminal-action-close {
+  font-size: 1rem;
+}
+
+.terminal-action-close:hover {
+  background: #d46262;
+  border-color: #a94444;
+  color: white;
 }
 
 .terminal-body {
@@ -323,6 +385,7 @@ h1 {
   overflow-y: auto;
   overflow-x: hidden;
   padding: clamp(14px, 2vw, 20px);
+  padding-bottom: 28px;
   color: var(--terminal-ink);
   line-height: 1.7;
   scrollbar-color: var(--green) transparent;
@@ -339,7 +402,7 @@ h1 {
 
 .profile-chip {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-columns: 86px minmax(0, 1fr);
   gap: 14px;
   align-items: center;
   margin-bottom: 18px;
@@ -348,11 +411,12 @@ h1 {
 }
 
 .profile-chip img {
-  width: 74px;
-  height: 74px;
+  width: 86px;
+  height: 86px;
   border: 1px solid rgba(31, 122, 92, 0.32);
   border-radius: 8px;
   object-fit: cover;
+  object-position: center top;
   filter: grayscale(1) contrast(1.04);
 }
 
@@ -411,6 +475,8 @@ h1 {
 .term-output {
   color: var(--muted);
   padding-left: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .redacted {
@@ -448,7 +514,7 @@ h1 {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
   margin-top: 2px;
 }
 
@@ -464,6 +530,19 @@ h1 {
 
 .terminal-command-form input::placeholder {
   color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.terminal-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  opacity: 0;
+  cursor: nwse-resize;
 }
 
 .section,
@@ -1021,6 +1100,15 @@ h1 {
 
   .terminal-bar {
     cursor: default;
+  }
+
+  .terminal-window {
+    min-height: 360px;
+    height: min(72vh, 700px);
+  }
+
+  .terminal-resize {
+    display: none;
   }
 
   .site-footer {
