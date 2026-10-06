@@ -1,6 +1,6 @@
 ---
 title: "BinSniff"
-description: "Extractor de caracteristicas para binarios, centrado en flujos de parsing PE y ELF."
+description: "Extractor de características para binarios, centrado en flujos de parsing PE y ELF."
 locale: es
 year: 2023
 updatedAt: 2024-07-30
@@ -10,4 +10,4 @@ repo: "https://github.com/sbenlloch/BinSniff"
 featured: true
 ---
 
-BinSniff es un proyecto de extraccion de caracteristicas de binarios para flujos de investigacion en seguridad. Encaja en tareas de triage y reversing donde importa extraer informacion de ejecutables de forma repetible.
+BinSniff es un proyecto de extracción de características de binarios para flujos de investigación en seguridad. Encaja en tareas de triage y reversing donde importa extraer información de ejecutables de forma repetible.

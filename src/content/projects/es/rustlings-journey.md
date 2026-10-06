@@ -1,6 +1,6 @@
 ---
 title: "Rustlings Journey"
-description: "Repositorio de aprendizaje de Rust mediante pequenos proyectos, ejercicios y tests."
+description: "Repositorio de aprendizaje de Rust mediante pequeños proyectos, ejercicios y tests."
 locale: es
 year: 2023
 updatedAt: 2023-05-15
@@ -10,4 +10,4 @@ repo: "https://github.com/sbenlloch/Rustlings-Journey"
 featured: false
 ---
 
-Rustlings Journey documenta aprendizaje de Rust mediante ejercicios, tests y pequenos proyectos. Refuerza la base de sistemas dentro del perfil de seguridad.
+Rustlings Journey documenta el aprendizaje de Rust mediante ejercicios, tests y pequeños proyectos. Refuerza la base de sistemas dentro del perfil de seguridad.

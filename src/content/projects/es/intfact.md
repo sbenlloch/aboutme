@@ -1,6 +1,6 @@
 ---
 title: "intfact"
-description: "Implementaciones en Go de algoritmos de factorizacion entera para descomponer numeros compuestos en factores primos."
+description: "Implementaciones en Go de algoritmos de factorización entera para descomponer números compuestos en factores primos."
 locale: es
 year: 2024
 updatedAt: 2024-01-25
@@ -10,4 +10,4 @@ repo: "https://github.com/sbenlloch/intfact"
 featured: true
 ---
 
-intfact explora metodos de factorizacion numerica en Go. Es relevante para formacion y experimentacion criptografica porque la factorizacion esta cerca de supuestos de seguridad de varios sistemas de clave publica.
+intfact explora métodos de factorización numérica en Go. Es relevante para la formación y la experimentación criptográfica porque la factorización está muy cerca de los supuestos de seguridad de varios sistemas de clave pública.

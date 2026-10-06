@@ -13,7 +13,7 @@ const { locale } = Astro.props as { locale: Locale };
 const t = ui[locale];
 ---
 
-<BaseLayout locale={locale} currentPath="/contact" title={`${t.pages.contactKicker} | Sergio Benlloch`}>
+<BaseLayout locale={locale} currentPath="/contact" title={`${t.pages.contactKicker} | ${profile.name}`} description={t.pages.contactDescription}>
   <section class="page-shell contact-page">
     <div>
       <p class="kicker">{t.pages.contactKicker}</p>
@@ -21,13 +21,13 @@ const t = ui[locale];
       <p class="lead">{t.pages.contactLead}</p>
       <div class="actions">
         <ContactReveal label={t.pages.email} variant="primary" />
-        <a class="button" href={profile.github} target="_blank" rel="noreferrer">github</a>
-        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">linkedin</a>
+        <a class="button" href={profile.github} target="_blank" rel="noreferrer">{t.common.github}</a>
+        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">{t.common.linkedin}</a>
       </div>
     </div>
     <TerminalWindow title="contact.sh">
       <p><span class="shell">$</span> printf "%s\n" contact</p>
-      <p>email: <span class="redacted">revealed on click</span></p>
+      <p>email: <span class="redacted">{t.pages.emailHidden}</span></p>
       <p>location: {profile.location}</p>
       <p>github: {profile.github}</p>
       <p>linkedin: {profile.linkedin}</p>

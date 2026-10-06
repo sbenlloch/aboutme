@@ -5,7 +5,7 @@ import ContactReveal from "@components/ContactReveal.astro";
 import SectionHeading from "@components/SectionHeading.astro";
 import TerminalWindow from "@components/TerminalWindow.astro";
 import Timeline from "@components/Timeline.astro";
-import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import { dateLocales, locales, pathFor, type Locale, ui } from "@data/i18n";
 import { profile } from "@data/profile";
 import { resumeCopy } from "@data/resume";
 import BaseLayout from "@layouts/BaseLayout.astro";
@@ -42,13 +42,13 @@ function contentSlug(id: string) {
       <div class="actions">
         <a class="button primary" href={pathFor(locale, "/projects")}>{t.home.viewProjects}</a>
         <ContactReveal label={t.home.contact} />
-        <a class="button" href={profile.github} target="_blank" rel="noreferrer">{t.home.githubStats}</a>
-        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">{t.home.linkedinStats}</a>
+        <a class="button" href={profile.github} target="_blank" rel="noreferrer">{t.common.github}</a>
+        <a class="button" href={profile.linkedin} target="_blank" rel="noreferrer">{t.common.linkedin}</a>
       </div>
     </div>
     <TerminalWindow title="whoami">
       <div class="profile-chip">
-        <img src={profile.avatar} alt={`${profile.name} profile photo`} width="96" height="96" loading="eager" />
+        <img src={profile.avatar} alt={t.a11y.photoAlt} width="96" height="96" loading="eager" />
         <div>
           <strong>{profile.githubBio}</strong>
           <span>{profile.company}</span>
@@ -62,8 +62,6 @@ function contentSlug(id: string) {
         <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> cat ~/.profile</p>
         <p class="term-output">{profile.location}</p>
         <p class="term-output">contact=<span class="redacted">use --mail flag</span></p>
-        <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> gh api /users/sbenlloch --jq '.public_repos,.followers'</p>
-        <p class="term-output">{profile.githubStats.publicRepos} repos / {profile.githubStats.followers} followers</p>
         <p><span class="term-user">sergio@secbox</span><span class="term-path">:~$</span> {t.home.focus}</p>
         <ul class="terminal-list">
           {t.home.focusItems.map((item) => <li>{item}</li>)}
@@ -107,7 +105,7 @@ function contentSlug(id: string) {
     <SectionHeading eyebrow={t.home.projectsEyebrow} title={t.home.projectsTitle} />
     <div class="grid">
       {projects.map((project) => (
-        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${project.data.status}`} tags={project.data.tags} />
+        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${t.cards.status[project.data.status]}`} labels={t.cards} tags={project.data.tags} />
       ))}
     </div>
   </section>
@@ -117,7 +115,7 @@ function contentSlug(id: string) {
       <SectionHeading eyebrow={t.home.blogEyebrow} title={t.home.blogTitle} />
       <div class="stack">
         {posts.map((post) => (
-          <ArticleCard href={pathFor(locale, `/blog/${contentSlug(post.id)}`)} title={post.data.title} description={post.data.description} meta={post.data.publishedAt.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })} tags={post.data.tags} />
+          <ArticleCard href={pathFor(locale, `/blog/${contentSlug(post.id)}`)} title={post.data.title} description={post.data.description} meta={post.data.publishedAt.toLocaleDateString(dateLocales[locale], { year: "numeric", month: "short", day: "numeric" })} tags={post.data.tags} />
         ))}
       </div>
     </div>

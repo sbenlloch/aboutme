@@ -7,12 +7,13 @@ interface Props {
   tags: string[];
   repo?: string;
   external?: boolean;
+  labels?: { updated: string; stars: string };
 }
 
-const { href, title, description, meta, tags, repo, external = false } = Astro.props;
+const { href, title, description, meta, tags, repo, external = false, labels } = Astro.props;
 ---
 
-<article class="card" data-repo-card={repo ? "true" : undefined} data-repo-url={repo}>
+<article class="card" data-repo-card={repo ? "true" : undefined} data-repo-url={repo} data-label-updated={labels?.updated} data-label-stars={labels?.stars}>
   <a class="card-link" href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
     <span class="card-meta" data-repo-meta>{meta}</span>
     <h3>{title}</h3>
@@ -55,7 +56,9 @@ const { href, title, description, meta, tags, repo, external = false } = Astro.p
           month: "short",
           day: "numeric"
         });
-        meta.textContent = `${repo.language || "repo"} / updated ${pushed} / ${repo.stargazers_count} stars`;
+        const updated = card.dataset.labelUpdated || "updated";
+        const stars = card.dataset.labelStars || "stars";
+        meta.textContent = `${repo.language || "repo"} / ${updated} ${pushed} / ${repo.stargazers_count} ${stars}`;
       })
       .catch(() => {
         // Static metadata is already rendered, so the card remains usable offline.

@@ -3,6 +3,7 @@ import { getCollection } from "astro:content";
 import ArticleCard from "@components/ArticleCard.astro";
 import SectionHeading from "@components/SectionHeading.astro";
 import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
 import BaseLayout from "@layouts/BaseLayout.astro";
 
 export function getStaticPaths() {
@@ -20,12 +21,12 @@ function contentSlug(id: string) {
 }
 ---
 
-<BaseLayout locale={locale} currentPath="/projects" title={`${t.pages.projectsTitle} | Sergio Benlloch`}>
+<BaseLayout locale={locale} currentPath="/projects" title={`${t.pages.projectsTitle} | ${profile.name}`} description={t.pages.projectsDescription}>
   <section class="page-shell">
     <SectionHeading eyebrow={t.pages.projectsEyebrow} title={t.pages.projectsTitle} />
     <div class="grid">
       {projects.map((project) => (
-        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${project.data.status}`} tags={project.data.tags} />
+        <ArticleCard href={project.data.repo ?? pathFor(locale, `/projects/${contentSlug(project.id)}`)} external={Boolean(project.data.repo)} repo={project.data.repo} title={project.data.title} description={project.data.description} meta={`${project.data.year} / ${t.cards.status[project.data.status]}`} labels={t.cards} tags={project.data.tags} />
       ))}
     </div>
   </section>

@@ -1,6 +1,7 @@
 ---
-import { getCollection, render } from "astro:content";
-import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import { dateLocales, locales, pathFor, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
 import BaseLayout from "@layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
@@ -12,16 +13,16 @@ export async function getStaticPaths() {
   );
 }
 
-const { post, locale } = Astro.props as { post: any; locale: Locale };
+const { post, locale } = Astro.props as { post: CollectionEntry<"blog">; locale: Locale };
 const t = ui[locale];
 const { Content } = await render(post);
 const slug = post.id.split("/").pop();
 ---
 
-<BaseLayout locale={locale} currentPath={`/blog/${slug}`} title={`${post.data.title} | Blog`} description={post.data.description}>
+<BaseLayout locale={locale} currentPath={`/blog/${slug}`} title={`${post.data.title} | ${profile.name}`} description={post.data.description}>
   <article class="prose page-shell">
     <a class="back-link" href={pathFor(locale, "/blog")}>{t.pages.backBlog}</a>
-    <p class="kicker">{post.data.publishedAt.toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })}</p>
+    <p class="kicker">{post.data.publishedAt.toLocaleDateString(dateLocales[locale], { year: "numeric", month: "long", day: "numeric" })}</p>
     <h1>{post.data.title}</h1>
     <p class="lead">{post.data.description}</p>
     <Content />

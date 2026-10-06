@@ -20,6 +20,13 @@ const {
 const t = ui[locale];
 const switchLocale = otherLocale(locale);
 const switchHref = pathForLocaleSwitch(locale, currentPath);
+const canonical = new URL(pathFor(locale, currentPath), Astro.site);
+const alternates = {
+  [locale]: canonical.href,
+  [switchLocale]: new URL(switchHref, Astro.site).href
+} as Record<Locale, string>;
+const ogImage = new URL(profile.avatar, Astro.site).href;
+const ogLocale = { en: "en_GB", es: "es_ES" }[locale];
 const navItems = [
   { href: pathFor(locale), label: t.nav.home },
   { href: pathFor(locale, "/projects"), label: t.nav.projects },
@@ -36,28 +43,44 @@ const navItems = [
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f8faf7" />
     <link rel="icon" href="/favicon.svg" />
+    <link rel="canonical" href={canonical.href} />
+    <link rel="alternate" hreflang="en" href={alternates.en} />
+    <link rel="alternate" hreflang="es" href={alternates.es} />
+    <link rel="alternate" hreflang="x-default" href={alternates.en} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={profile.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta name="twitter:card" content="summary" />
     <title>{title}</title>
   </head>
   <body>
     <script is:inline>
-      const savedTheme = localStorage.getItem("theme");
-      if (savedTheme === "dark" || savedTheme === "light") {
-        document.documentElement.dataset.theme = savedTheme;
+      try {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark" || savedTheme === "light") {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+      } catch {
+        // Storage can be blocked (private mode, strict settings); keep the default theme.
       }
     </script>
     <div class="scanline" aria-hidden="true"></div>
     <header class="site-header">
-      <a class="brand" href={pathFor(locale)} aria-label="Go home">
+      <a class="brand" href={pathFor(locale)} aria-label={t.a11y.home}>
         <span class="prompt">sergio@sec</span><span class="cursor">_</span>
       </a>
-      <nav class="nav" aria-label="Primary navigation">
+      <nav class="nav" aria-label={t.a11y.primaryNav}>
         {navItems.map((item) => <a href={item.href}>{item.label}</a>)}
       </nav>
-      <div class="toggles" aria-label="Preferences">
-        <a class="toggle-link" href={switchHref} aria-label={`Switch language to ${switchLocale}`}>
+      <div class="toggles" aria-label={t.a11y.preferences}>
+        <a class="toggle-link" href={switchHref} aria-label={t.a11y.switchLanguage} hreflang={switchLocale}>
           {t.language}: {switchLocale}
         </a>
-        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle black and white theme">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label={t.a11y.toggleTheme}>
           {t.theme}: <span data-theme-label>{t.light}</span>
         </button>
       </div>
@@ -82,7 +105,11 @@ const navItems = [
       button?.addEventListener("click", () => {
         const nextTheme = getNextTheme();
         document.documentElement.dataset.theme = nextTheme;
-        localStorage.setItem("theme", nextTheme);
+        try {
+          localStorage.setItem("theme", nextTheme);
+        } catch {
+          // Theme still switches for this page view.
+        }
         applyThemeLabel();
       });
     </script>

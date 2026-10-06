@@ -1,6 +1,7 @@
 ---
-import { getCollection, render } from "astro:content";
-import { locales, pathFor, type Locale, ui } from "@data/i18n";
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import { dateLocales, locales, pathFor, type Locale, ui } from "@data/i18n";
+import { profile } from "@data/profile";
 import BaseLayout from "@layouts/BaseLayout.astro";
 
 export async function getStaticPaths() {
@@ -12,22 +13,22 @@ export async function getStaticPaths() {
   );
 }
 
-const { project, locale } = Astro.props as { project: any; locale: Locale };
+const { project, locale } = Astro.props as { project: CollectionEntry<"projects">; locale: Locale };
 const t = ui[locale];
 const { Content } = await render(project);
 const slug = project.id.split("/").pop();
 ---
 
-<BaseLayout locale={locale} currentPath={`/projects/${slug}`} title={`${project.data.title} | Projects`} description={project.data.description}>
+<BaseLayout locale={locale} currentPath={`/projects/${slug}`} title={`${project.data.title} | ${profile.name}`} description={project.data.description}>
   <article class="prose page-shell">
     <a class="back-link" href={pathFor(locale, "/projects")}>{t.pages.backProjects}</a>
     <p class="kicker">
-      {project.data.year} / {project.data.status}
-      {project.data.updatedAt && ` / ${t.pages.updated} ${project.data.updatedAt.toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })}`}
+      {project.data.year} / {t.cards.status[project.data.status]}
+      {project.data.updatedAt && ` / ${t.pages.updated} ${project.data.updatedAt.toLocaleDateString(dateLocales[locale], { year: "numeric", month: "short", day: "numeric" })}`}
     </p>
     <h1>{project.data.title}</h1>
     <p class="lead">{project.data.description}</p>
-    <div class="tags page-tags">{project.data.tags.map((tag: string) => <span>#{tag}</span>)}</div>
+    <div class="tags page-tags">{project.data.tags.map((tag) => <span>#{tag}</span>)}</div>
     <Content />
     <div class="actions">
       {project.data.link && <a class="button primary" href={project.data.link}>{t.common.openProject}</a>}

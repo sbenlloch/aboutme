@@ -823,12 +823,12 @@ const { title = "session.log" } = Astro.props;
 
       if (command === "experience") {
         return [
-          "2023-present  Security Researcher at ITI - Instituto Tecnológico de Informática",
-          "2021-2023    Offensive Security Researcher at Cyber Intelligence S.L."
+          "2023-present  R&D Security Engineer at ITI - Instituto Tecnológico de Informática",
+          "2021-2023     Offensive Security Researcher at Cyber Intelligence S.L."
         ];
       }
 
-      if (command === "contact") return ["email: [email redacted]", "github: github.com/sbenlloch", "linkedin: linkedin.com/in/sergio-benlloch"];
+      if (command === "contact") return [locale === "es" ? "email: usa el botón «abrir canal seguro»" : "email: use the \"open secure channel\" button", "github: github.com/sbenlloch", "linkedin: linkedin.com/in/sergio-benlloch"];
       if (command === "github") return ["https://github.com/sbenlloch"];
       if (command === "linkedin") return ["https://www.linkedin.com/in/sergio-benlloch/"];
       if (command === "date") return [new Date().toDateString()];

@@ -13,8 +13,7 @@ const { label, variant = "plain" } = Astro.props;
   class:list={["button", { primary: variant === "primary" }]}
   type="button"
   data-contact-reveal
-  data-user={profile.emailUser}
-  data-domain={profile.emailDomain}
+  data-contact={profile.emailEncoded}
 >
   {label}
 </button>
@@ -22,8 +21,8 @@ const { label, variant = "plain" } = Astro.props;
 <script>
   document.querySelectorAll<HTMLButtonElement>("[data-contact-reveal]").forEach((button) => {
     button.addEventListener("click", () => {
-      const address = `${button.dataset.user}@${button.dataset.domain}`;
-      window.location.href = `mailto:${address}`;
+      const address = atob(button.dataset.contact ?? "").split("").reverse().join("");
+      if (address) window.location.href = `mailto:${address}`;
     });
   });
 </script>

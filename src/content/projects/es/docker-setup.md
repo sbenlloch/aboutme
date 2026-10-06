@@ -1,6 +1,6 @@
 ---
 title: "docker-setup"
-description: "Setup Docker de Ubuntu con zsh configurado para una imagen de terminal usable."
+description: "Imagen Docker de Ubuntu con zsh configurado para tener un terminal cómodo de usar."
 locale: es
 year: 2023
 updatedAt: 2023-08-05
@@ -10,4 +10,4 @@ repo: "https://github.com/sbenlloch/docker-setup"
 featured: false
 ---
 
-docker-setup captura un entorno de terminal en una imagen Docker. Es util para flujos de shell reproducibles y entornos rapidos de trabajo.
+docker-setup captura un entorno de terminal en una imagen Docker. Es útil para flujos de shell reproducibles y entornos de trabajo rápidos.

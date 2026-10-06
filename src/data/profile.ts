@@ -2,29 +2,14 @@ export const profile = {
   name: "Sergio Benlloch",
   role: "R&D Security Engineer",
   location: "Valencia, Spain / Europe",
-  email: "[email redacted]",
-  emailUser: "redacted",
-  emailDomain: "redacted",
+  // Base64 of the reversed address, so the plain email never ships in HTML or JS.
+  // Decoded only on click by ContactReveal.astro.
+  emailEncoded: "ZW0ubm90b3JwQGhjb2xsbmViaWdyZXM=",
   github: "https://github.com/sbenlloch",
   linkedin: "https://www.linkedin.com/in/sergio-benlloch/",
   avatar: "/profile-avatar.jpg",
-  company: "ITI - Instituto Tecnologico de Informatica",
+  company: "ITI - Instituto Tecnológico de Informática",
   githubBio: "Computer engineer. Security research, reversing, cryptography, AI security.",
-  githubStats: {
-    publicRepos: 10,
-    followers: 18,
-    following: 38
-  },
-  linkedinStats: {
-    followers: "709",
-    connections: "500+"
-  },
   summary:
-    "Computer engineer specialized in Computer Engineering, currently working as an R&D Security Engineer on practical security assessment, reverse engineering, cryptography, AI security, and robust mitigation work with engineering teams.",
-  availability: [
-    "penetration testing",
-    "security research",
-    "reverse engineering",
-    "secure development and review"
-  ]
+    "Computer engineer working as an R&D Security Engineer on practical security assessment, reverse engineering, cryptography, AI security, and robust mitigation work with engineering teams."
 };
